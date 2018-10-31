@@ -2,9 +2,11 @@ from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
 import telebot
 import time
 import re
+import os
 
-
-TOKEN = "695592773:AAER3_OWgiKSvDP5NYf2sSmM71Iflg6GTQg"
+# get the bot token from the enviroment variable.
+# note: you must add a bot token to your environment to make this bit work, and save it with the name 'BOT_TOKEN'
+TOKEN = os.environ['BOT_TOKEN']
 bot = telebot.TeleBot(TOKEN)
 
 # def expense_parser(bot, update):
