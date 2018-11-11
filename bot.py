@@ -18,9 +18,11 @@ bot = telebot.TeleBot(TOKEN)
 def expense_parse(message):
     expense = {'amount': None,
                'expense': None,
-               'category': None }
+               'category': None
+               }
     user_message = message.text.split(',')
 
+    # input validations
     # validate number of fields
     if len(user_message) < len(expense):
         bot.reply_to(message, '''missing details. you should write:
@@ -33,7 +35,16 @@ def expense_parse(message):
         please send again.''')
 
     # validate amount format
-    money_regax = re.compile(r'(\d+)')
+    # extract the value from any characters using REGEX
+    amount_pattern = re.compile(r'(\b[-+]?[0-9]+\.?[0-9]*\b)')
+    expense['amount'] = amount_pattern.search(user_message[0])
+
+    # check that the amount is a valid number (can be a float)
+    # in the future: list all valid categories, and check if it's simillar to a one of the categories using machean learning
+
+
+
+
 
 
 
