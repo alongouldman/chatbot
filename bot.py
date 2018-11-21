@@ -18,7 +18,7 @@ bot = telebot.TeleBot(TOKEN)
 @bot.message_handler(func=lambda message: True)
 def expense_parse(message):
     try:
-        expense = Expense(message)
+        expense = Expense(message.text)
     except NoCategoryError:
         bot.reply_to(message, '''
             חסרים פרטים. על מה ההוצאה?
