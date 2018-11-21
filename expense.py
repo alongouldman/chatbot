@@ -19,14 +19,4 @@ class Expense:
         else:
             self._expense_details = user_message[2]
 
-        if len(user_message) < len(expense):
-            bot.reply_to(message, '''missing details. you should write:
-            1. how much money was spent?
-            2. what did you buy?
-            3. what category was it?
-            you can also add comments after the expense.
-            example: 
-            '300 שקל, מתנה לחתונה של שלומי ושלומית, מתנות'
-            please send again.''')
-
 
