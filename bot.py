@@ -1,8 +1,9 @@
 # from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
 import telebot
 import time
-import re
 import os
+from custom_errors import *
+from expense import Expense
 
 # get the bot token from the enviroment variable.
 # note: you must add a bot token to your environment to make this bit work, and save it with the name 'BOT_TOKEN'
@@ -16,37 +17,18 @@ bot = telebot.TeleBot(TOKEN)
 
 @bot.message_handler(func=lambda message: True)
 def expense_parse(message):
-    expense = {'amount': None,
-               'expense': None,
-               'category': None
-               }
-    user_message = message.text.split(',')
-
-    # input validations
-    # validate number of fields
-    if len(user_message) < len(expense):
-        bot.reply_to(message, '''missing details. you should write:
-        1. how much money was spent?
-        2. what did you buy?
-        3. what category was it?
-        you can also add comments after the expense.
-        example: 
-        '300 שקל, מתנה לחתונה של שלומי ושלומית, מתנות'
-        please send again.''')
-
-    # validate amount format
-    # extract the value from any characters using REGEX
-    amount_pattern = re.compile(r'(\b[-+]?[0-9]+\.?[0-9]*\b)')
-    expense['amount'] = amount_pattern.search(user_message[0])
-
-    # check that the amount is a valid number (can be a float)
-    # in the future: list all valid categories, and check if it's simillar to a one of the categories using machean learning
-
-
-
-
-
-
+    try:
+        expense = Expense(message)
+    except NoCategoryError:
+        bot.reply_to(message, '''
+            חסרים פרטים. על מה ההוצאה?
+            ''')
+    except NoAmountError:
+        bot.reply_to(message, '''
+            חסר סכום. כמה כסף בזבזת?
+            ''')
+    else:
+        bot.reply_to(message, expense._amount)
 
 @bot.message_handler(commands=['start'])
 def send_welcome(message):
