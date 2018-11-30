@@ -1,3 +1,5 @@
-from custom_errors import *
+from expense import Expense
 
-raise NoCategoryError
+
+e1 = Expense("300 מתנה מתנה לאייל")
+print(e1)
