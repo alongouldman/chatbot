@@ -10,10 +10,6 @@ from expense import Expense
 TOKEN = os.environ['BOT_TOKEN']
 bot = telebot.TeleBot(TOKEN)
 
-# def expense_parser(bot, update):
-#     message = update.message.text
-#     amount, category, expense = message.split(',')
-#     update.message.reply_text(f'you bought {expense} (which is {category}) and it cost {amount} shekels!')
 
 @bot.message_handler(func=lambda message: True)
 def expense_parse(message):
@@ -28,7 +24,8 @@ def expense_parse(message):
             חסר סכום. כמה כסף בזבזת?
             ''')
     else:
-        bot.reply_to(message, expense._amount)
+        bot.reply_to(message, expense)
+
 
 @bot.message_handler(commands=['start'])
 def send_welcome(message):
