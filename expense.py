@@ -20,7 +20,7 @@ class Expense:
             # collect all other expenses details
             self._expense_details = ''
             for i in range(2, len(user_message)):
-                self._expense_details + user_message[i] + ' '
+                self._expense_details += user_message[i] + ' '
             self._expense_details.rstrip()
 
 
