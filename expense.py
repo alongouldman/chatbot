@@ -4,7 +4,7 @@ from utils import *
 
 class Expense:
     def __init__(self, message):
-        user_message = message.split(',')
+        user_message = message.split(' ')
 
         # input validations
         self._amount = get_amount(user_message[0])
@@ -17,6 +17,15 @@ class Expense:
         if len(user_message) == 2:  # assume the user sent amount and category, without expanse details
             self._expense_details = None
         else:
-            self._expense_details = user_message[2]
+            # collect all other expenses details
+            self._expense_details = ''
+            for i in range(2, len(user_message)):
+                self._expense_details + user_message[i] + ' '
+            self._expense_details.rstrip()
 
 
+    def __repr__(self):
+        expense = f"amount: {self._amount}\ncategory: {self._category}"
+        if self._expense_details:
+            expense += f"\ndetails: {self._expense_details}"
+        return expense
