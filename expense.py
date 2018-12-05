@@ -4,8 +4,8 @@ from utils import *
 
 class Expense:
     def __init__(self, message):
-        user_message = message.split(' ')
-
+        # input string
+        user_message = message.text.split(' ')
         # input validations
         self._amount = get_amount(user_message[0])
         if not self._amount:
@@ -23,9 +23,13 @@ class Expense:
                 self._expense_details += user_message[i] + ' '
             self._expense_details.rstrip()
 
+        # input date
+        self._date = get_time(message)
+
 
     def __repr__(self):
         expense = f"amount: {self._amount}\ncategory: {self._category}"
         if self._expense_details:
             expense += f"\ndetails: {self._expense_details}"
+        expense+= f"\ndate: {self._date.day}.{self._date.month}.{self._date.year}"
         return expense
