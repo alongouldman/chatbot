@@ -27,6 +27,12 @@ def expense_parse(message):
         bot.reply_to(message, expense)
 
 
+@bot.message_handler(commands=['date'])
+def message_date(message):
+    bot.reply_to(message, message.date)
+
+
+
 @bot.message_handler(commands=['start'])
 def send_welcome(message):
     bot.reply_to(message, "good morning!")
