@@ -2,7 +2,22 @@ import re
 from datetime import datetime
 from pytz import timezone
 
+# =====================================
+#  global variables
+# =====================================
 
+# MONEY_WORDS = [
+#     "שקל",
+#     'ש"ח',
+#     "שח",
+#     "שקלים",
+#     "שרל",
+#     "\u20AA"
+# ]
+
+# =====================================
+#  functions
+# =====================================
 def get_amount(user_input):
     '''
     gets the amount of money from a string
@@ -25,3 +40,8 @@ def get_time(message):
     date = datetime.fromtimestamp(unix_time , timezone('Israel'))
     return date
 
+
+def get_money_words():
+    with open('money_words.txt', 'r') as file:
+        words = file.read().splitlines()
+        return words
