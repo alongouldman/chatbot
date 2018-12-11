@@ -45,6 +45,8 @@ def expense_parse(message):
 
 
 
+with open('testing.txt', 'w') as test_file:
+    test_file.write('hello world')
 
 print("bot started")
 while True:
