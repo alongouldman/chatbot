@@ -19,6 +19,13 @@ def google_sheets(message):
     bot.reply_to(message, records)
 
 
+@bot.message_handler(commands=['test'])
+def google_sheets(message):
+    records = get_environ()
+    bot.reply_to(message, records)
+
+
+
 @bot.message_handler(commands=['start'])
 def send_welcome(message):
     bot.reply_to(message, "good morning!")
