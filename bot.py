@@ -5,6 +5,7 @@ import os
 from custom_errors import *
 from expense import Expense
 from spreadsheet import *
+from utils import get_money_words
 
 
 # get the bot token from the enviroment variable.
@@ -21,6 +22,10 @@ def google_sheets(message):
         msg += f"date: {i['date']}, amount: {i['amount']}, category: {i['category']}\n"
     bot.reply_to(message, msg)
 
+
+@bot.message_handler(commands=['test'])
+def test_words(message):
+    bot.reply_to(message, get_money_words())
 
 
 @bot.message_handler(commands=['start'])
