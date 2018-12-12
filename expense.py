@@ -26,7 +26,6 @@ class Expense:
         # input date
         self._date = get_time(message)
 
-
     def __repr__(self):
         expense = f"amount: {self._amount}\ncategory: {self._category}"
         if self._expense_details:
