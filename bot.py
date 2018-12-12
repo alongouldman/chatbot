@@ -5,7 +5,6 @@ import os
 from custom_errors import *
 from expense import Expense
 from spreadsheet import *
-from utils import get_money_words
 
 
 # get the bot token from the enviroment variable.
