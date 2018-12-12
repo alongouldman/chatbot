@@ -41,7 +41,7 @@ def get_time(message):
     return date
 
 
-def get_money_words():
-    with open('money_words.txt', 'r') as file:
-        words = file.read().splitlines()
-        return words
+def remove_money_words(all_words):
+    with open('money_words.txt', 'r', encoding="utf-8-sig") as file:
+        money_words = file.read().splitlines()
+        return [item for item in all_words if item not in money_words]
