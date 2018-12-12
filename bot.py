@@ -23,13 +23,13 @@ def google_sheets(message):
     bot.reply_to(message, msg)
 
 
-@bot.message_handler(commands=['test'])
-def test_words(message):
-    words = get_money_words()
-    money_words = ""
-    for i in words:
-        money_words += i + ' '
-    bot.reply_to(message, money_words)
+# @bot.message_handler(commands=['test'])
+# def test_words(message):
+#     words = get_money_words()
+#     money_words = ""
+#     for i in words:
+#         money_words += i + ' '
+#     bot.reply_to(message, money_words)
 
 
 @bot.message_handler(commands=['start'])
