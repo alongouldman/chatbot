@@ -15,14 +15,11 @@ bot = telebot.TeleBot(TOKEN)
 
 @bot.message_handler(commands=['sheet'])
 def google_sheets(message):
+    msg = ""
     records = get_records()
-    bot.reply_to(message, records)
-
-
-@bot.message_handler(commands=['test'])
-def google_sheets(message):
-    records = get_environ()
-    bot.reply_to(message, records)
+    for i in records:
+        msg += f"date: {i['date']}, amount: {i['amount']}, category: {i['category']}\n"
+    bot.reply_to(message, msg)
 
 
 
