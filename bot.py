@@ -4,7 +4,7 @@ import time
 import os
 from custom_errors import *
 from expense import Expense
-from spreadsheet import get_records
+from spreadsheet import *
 
 
 # get the bot token from the enviroment variable.
