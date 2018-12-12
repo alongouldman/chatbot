@@ -23,11 +23,13 @@ from utils import *
 
 
 def remove_money_words(words):
-    print(get_money_words())
+    money_words = get_money_words()
+    print(money_words)
+    return [item for item in words if item not in money_words]
 
 
 
-# s = "30 שקל צדקה מרמי לוי!!!! שכוייח"
-#
-# words = s.split(' ')
-# remove_money_words(words)
+s = '30 שקל צדקה שקל צדקה מרמי ש"ח לוי!!!! שכוייח'
+
+words = s.split(' ')
+print(remove_money_words(words))

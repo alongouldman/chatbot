@@ -7,6 +7,8 @@ class Expense:
         # input string
         user_message = message.text.split(' ')
         # input validations
+        user_message = remove_money_words(user_message)  # removing "money words"
+
         self._amount = get_amount(user_message[0])
         if not self._amount:
             raise NoAmountError
