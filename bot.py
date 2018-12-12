@@ -13,12 +13,6 @@ TOKEN = os.environ['BOT_TOKEN']
 bot = telebot.TeleBot(TOKEN)
 
 
-@bot.message_handler(commands=['date'])
-def message_date(message):
-    time = get_time(message)
-    bot.reply_to(message, time)
-
-
 @bot.message_handler(commands=['sheet'])
 def google_sheets(message):
     bot.reply_to(message, get_records())
