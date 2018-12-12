@@ -15,7 +15,8 @@ bot = telebot.TeleBot(TOKEN)
 
 @bot.message_handler(commands=['sheet'])
 def google_sheets(message):
-    bot.reply_to(message, get_records())
+    records = get_records()
+    bot.reply_to(message, records)
 
 
 @bot.message_handler(commands=['start'])

@@ -11,7 +11,6 @@ def get_credentials(scope):
 
 
 def get_records():
-
     scope = ['https://spreadsheets.google.com/feeds',
              'https://www.googleapis.com/auth/drive']
 
