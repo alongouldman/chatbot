@@ -25,7 +25,11 @@ def google_sheets(message):
 
 @bot.message_handler(commands=['test'])
 def test_words(message):
-    bot.reply_to(message, get_money_words())
+    words = get_money_words()
+    money_words = ""
+    for i in words:
+        money_words += i + ' '
+    bot.reply_to(message, money_words)
 
 
 @bot.message_handler(commands=['start'])
