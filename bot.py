@@ -4,6 +4,7 @@ import time
 import os
 from custom_errors import *
 from expense import Expense
+from spreadsheet import get_records
 
 
 # get the bot token from the enviroment variable.
@@ -16,6 +17,11 @@ bot = telebot.TeleBot(TOKEN)
 def message_date(message):
     time = get_time(message)
     bot.reply_to(message, time)
+
+
+@bot.message_handler(commands=['sheet'])
+def google_sheets(message):
+    bot.reply_to(message, get_records())
 
 
 @bot.message_handler(commands=['start'])
@@ -43,10 +49,6 @@ def expense_parse(message):
     else:
         bot.reply_to(message, expense)
 
-
-
-with open('testing.txt', 'w') as test_file:
-    test_file.write('hello world')
 
 print("bot started")
 while True:
