@@ -4,15 +4,9 @@ import os
 import json
 
 
-def get_environ():
-    keyfile_dict = json.loads(os.environ['BOT_GOOGLE_SECRET'])
-    return keyfile_dict
-
-
-
 def get_credentials(scope):
     keyfile_dict = json.loads(os.environ['BOT_GOOGLE_SECRET'])
-    creds = ServiceAccountCredentials.from_json_keyfile_dict(keyfile_dict,scope)
+    creds = ServiceAccountCredentials.from_json_keyfile_dict(keyfile_dict, scope)
     return creds
 
 
