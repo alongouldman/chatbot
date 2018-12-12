@@ -6,7 +6,7 @@ import json
 
 def get_environ():
     keyfile_dict = json.loads(os.environ['BOT_GOOGLE_SECRET'])
-    return type(keyfile_dict)
+    return keyfile_dict
 
 
 
