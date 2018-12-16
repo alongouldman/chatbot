@@ -9,28 +9,28 @@ class Expense:
         # input validations
         user_message = remove_money_words(user_message)  # removing "money words"
 
-        self._amount = get_amount(user_message[0])
-        if not self._amount:
+        self.amount = get_amount(user_message[0])
+        if not self.amount:
             raise NoAmountError
         if len(user_message) == 1:  # only amount, without category
                 raise NoCategoryError
         # TODO: in the future: list all valid categories, and check if it's simillar to a one of the categories using machean learning
-        self._category = user_message[1]
+        self.category = user_message[1]
         if len(user_message) == 2:  # assume the user sent amount and category, without expanse details
-            self._expense_details = None
+            self.expense_details = None
         else:
             # collect all other expenses details
-            self._expense_details = ''
+            self.expense_details = ''
             for i in range(2, len(user_message)):
-                self._expense_details += user_message[i] + ' '
-            self._expense_details.rstrip()
+                self.expense_details += user_message[i] + ' '
+            self.expense_details.rstrip()
 
         # input date
-        self._date = get_time(message)
+        self.date = get_time(message)
 
     def __repr__(self):
-        expense = f"amount: {self._amount}\ncategory: {self._category}"
-        if self._expense_details:
-            expense += f"\ndetails: {self._expense_details}"
-        expense+= f"\ndate: {self._date.day}.{self._date.month}.{self._date.year}"
+        expense = f"amount: {self.amount}\ncategory: {self.category}"
+        if self.expense_details:
+            expense += f"\ndetails: {self.expense_details}"
+        expense+= f"\ndate: {self.date.day}.{self.date.month}.{self.date.year}"
         return expense

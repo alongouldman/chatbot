@@ -13,13 +13,17 @@ TOKEN = os.environ['BOT_TOKEN']
 bot = telebot.TeleBot(TOKEN)
 
 
-@bot.message_handler(commands=['sheet'])
-def google_sheets(message):
-    msg = ""
-    records = get_records()
-    for i in records:
-        msg += f"date: {i['date']}, amount: {i['amount']}, category: {i['category']}\n"
-    bot.reply_to(message, msg)
+# TODO: add feacher request list in the sheets
+# TODO: add sheets to each month
+
+
+# @bot.message_handler(commands=['sheet'])
+# def google_sheets(message):
+#     msg = ""
+#     records = get_records()
+#     for i in records:
+#         msg += f"date: {i['date']}, amount: {i['amount']}, category: {i['category']}\n"
+#     bot.reply_to(message, msg)
 
 
 # @bot.message_handler(commands=['test'])
@@ -39,6 +43,7 @@ def send_welcome(message):
 @bot.message_handler(commands=['help'])
 def send_welcome(message):
     bot.reply_to(message, "the bot is running. in order to send detailes about your expanse, send in this format:\nhow much did you spend? comma (,), what was it about, and what category is the expanse")
+    # TODO: make this help function better
 
 
 @bot.message_handler(func=lambda message: True)
@@ -55,6 +60,7 @@ def expense_parse(message):
             ''')
     else:
         bot.reply_to(message, expense)
+        add_to_sheet(expense)
 
 
 print("bot started")
