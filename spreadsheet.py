@@ -10,14 +10,23 @@ def get_credentials(scope):
     return creds
 
 
-def get_records():
+def get_worksheet():
     scope = ['https://spreadsheets.google.com/feeds',
              'https://www.googleapis.com/auth/drive']
 
     creds = get_credentials(scope)
     client = gspread.authorize(creds)
 
-    sheet = client.open('outcomes from telegram bot').sheet1
+    spread_sheet = client.open('outcomes from telegram bot')
+    work_sheet = spread_sheet.sheet1
+    # results = sheet.get_all_records()
+    # return results
+    return work_sheet
 
-    results = sheet.get_all_records()
-    return results
+
+def add_to_sheet(expense):
+    work_sheet = get_worksheet()
+    new_row = [expense.date, expense.amount, expense.category, expense.expense_details]
+    work_sheet.append_row(new_row)
+
+
