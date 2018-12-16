@@ -24,6 +24,7 @@ def get_worksheet():
     return work_sheet
 
 
+
 def add_to_sheet(expense):
     work_sheet = get_worksheet()
     new_row = [expense.date, expense.amount, expense.category, expense.expense_details]
