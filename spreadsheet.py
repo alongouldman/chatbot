@@ -24,10 +24,10 @@ def get_worksheet():
     return work_sheet
 
 
-
 def add_to_sheet(expense):
     work_sheet = get_worksheet()
-    new_row = [expense.date, expense.amount, expense.category, expense.expense_details]
+    date = ".".join([expense.date.day, expense.date.month, expense.date.year])
+    new_row = [date, expense.amount, expense.category, expense.expense_details]
     work_sheet.append_row(new_row)
 
 
