@@ -27,7 +27,7 @@ def get_worksheet():
 def add_to_sheet(expense):
     work_sheet = get_worksheet()
     # date = ".".join([expense.date.day, expense.date.month, expense.date.year])
-    date = f"{expense.date:%d.%m.%y}"
+    date = f"{expense.date:%d.%m.%Y}"
     new_row = [date, expense.amount, expense.category]
     if expense.expense_details:
         new_row.append(expense.expense_details)
