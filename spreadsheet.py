@@ -2,6 +2,7 @@ import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 import os
 import json
+from custom_errors import *
 
 
 def get_credentials(scope):
@@ -45,8 +46,10 @@ def add_to_sheet(expense):
 
 
 def pop():
-    work_sheet = get_spreadsheet().sheet1
+    work_sheet = get_spreadsheet().worksheets()[-1]  # delete from last worksheet
     length = len(work_sheet.col_values(1))
+    if length < 2:  # no rows!
+        raise NoRowsError
     row_to_delete = work_sheet.row_values(length)
     # delete
     work_sheet.delete_row(length)
