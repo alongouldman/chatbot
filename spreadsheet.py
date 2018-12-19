@@ -25,7 +25,16 @@ def get_spreadsheet():
 
 
 def add_to_sheet(expense):
-    work_sheet = get_spreadsheet().sheet1
+    spread_sheet = get_spreadsheet()
+    sheet_name = f"{expense.date:%m.%y}"
+    # write to sheet according to the month
+    try:
+        work_sheet = spread_sheet.worksheet(sheet_name)
+    except gspread.exceptions.WorksheetNotFound:
+        # create worksheet
+        work_sheet = spread_sheet.add_worksheet(sheet_name, 1, 1000)
+        work_sheet.insert_row(['date', 'amount', 'category', 'details'])
+
     # date = ".".join([expense.date.day, expense.date.month, expense.date.year])
     date = f"{expense.date:%d.%m.%Y}"
     new_row = [date, expense.amount, expense.category]
