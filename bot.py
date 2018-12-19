@@ -42,11 +42,15 @@ def send_welcome(message):
 
 @bot.message_handler(commands=['delete'])
 def delete_last(message):
-    deleted = pop()
-    msg = "DELETED:"
-    for cell in deleted:
-        msg += "\n" + cell
-    bot.reply_to(message, msg)
+    try:
+        deleted = pop()
+    except NoRowsError:
+        bot.reply_to(message, 'no rows to delete')
+    else:
+        msg = "DELETED:"
+        for cell in deleted:
+            msg += "\n" + cell
+        bot.reply_to(message, msg)
 
 
 
