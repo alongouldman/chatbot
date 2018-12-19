@@ -27,44 +27,39 @@ def get_records():
 
     spread_sheet = client.open('outcomes from telegram bot')
     work_sheet = spread_sheet.sheet1
-    row_count = work_sheet.row_count
-    row_count = work_sheet.row_count
-    print(row_count)
-    work_sheet.append_row(['test', 'row', 'this', 'is', 'a', 'row'])
-    work_sheet.append_row(['test', 'row2', 'this', 'is'])
-
-    print(row_count)
-    results = work_sheet.get_all_records()
-    print(results)
+    print(len(work_sheet.col_values(1)))
+    work_sheet.delete_row(2)
     # return results
     return work_sheet
 
 
-# get_records()
+get_records()
+
+
 # https://www.python-course.eu/python3_properties.php
-class Attr:
-    def __init__(self):
-        self.some = 10
-
-    @property
-    def some(self):
-        return self._a
-
-    @some.setter
-    def some(self, x):
-        if x < 0:
-            self._a = 0
-        else:
-            self._a = x
-
-
-something = Attr()
-print(something.some)
-something.some = 20
-print(something.some)
-
-something.some = -50
-print(something.some)
+# class Attr:
+#     def __init__(self):
+#         self.some = 10
+#
+#     @property
+#     def some(self):
+#         return self._a
+#
+#     @some.setter
+#     def some(self, x):
+#         if x < 0:
+#             self._a = 0
+#         else:
+#             self._a = x
+#
+#
+# something = Attr()
+# print(something.some)
+# something.some = 20
+# print(something.some)
+#
+# something.some = -50
+# print(something.some)
 
 
 # import json
