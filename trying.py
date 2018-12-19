@@ -39,6 +39,15 @@ def get_records():
         work_sheet.resize(1)
 
     print('done')
+    last = spread_sheet.worksheets()[-1]
+    work_sheet = last
+    length = len(work_sheet.col_values(1))
+    if length < 2:
+        return
+    row_to_delete = work_sheet.row_values(length)
+    # delete
+    work_sheet.delete_row(length)
+    print(row_to_delete)
     return work_sheet
 
 
