@@ -33,7 +33,8 @@ def add_to_sheet(expense):
     except gspread.exceptions.WorksheetNotFound:
         # create worksheet
         work_sheet = spread_sheet.add_worksheet(sheet_name, 1, 1000)
-        work_sheet.insert_row(['date', 'amount', 'category', 'details'])
+        work_sheet.insert_row(['date', 'amount', 'category', 'details'])  # add headers
+        work_sheet.resize(1)
 
     # date = ".".join([expense.date.day, expense.date.month, expense.date.year])
     date = f"{expense.date:%d.%m.%Y}"

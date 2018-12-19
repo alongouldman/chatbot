@@ -33,7 +33,11 @@ def get_records():
     try:
         spread_sheet.worksheet('no worksheet!')
     except gspread.exceptions.WorksheetNotFound:
-        spread_sheet.add_worksheet('no worksheet!', 1, 1000)
+        work_sheet = spread_sheet.add_worksheet('no worksheet!', 1, 1000)
+        # work_sheet = spread_sheet.worksheet('no worksheet!')
+        work_sheet.insert_row(['date', 'amount', 'category', 'details'])
+        work_sheet.resize(1)
+
     print('done')
     return work_sheet
 
