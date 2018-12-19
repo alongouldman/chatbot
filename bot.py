@@ -40,6 +40,16 @@ def send_welcome(message):
     bot.reply_to(message, "good morning!")
 
 
+@bot.message_handler(commands=['delete'])
+def delete_last(message):
+    deleted = pop()
+    msg = "DELETED:"
+    for cell in deleted:
+        msg += "\n" + cell
+    bot.reply_to(message, msg)
+
+
+
 @bot.message_handler(commands=['help'])
 def send_welcome(message):
     bot.reply_to(message, "the bot is running. in order to send detailes about your expanse, send in this format:\nhow much did you spend? comma (,), what was it about, and what category is the expanse")
@@ -60,7 +70,14 @@ def expense_parse(message):
             ''')
     else:
         bot.reply_to(message, expense)
-        add_to_sheet(expense)
+        try:
+            add_to_sheet(expense)
+        except Exception as err:
+            if hasattr(err, 'message'):
+                bot.reply_to(message, err.message)
+            else:
+                bot.reply_to(message, err)
+            bot.reply_to(message, 'expense not added from some reason, sorry....\n#not_added')
 
 
 print("bot started")
