@@ -27,9 +27,14 @@ def get_records():
 
     spread_sheet = client.open('outcomes from telegram bot')
     work_sheet = spread_sheet.sheet1
-    print(len(work_sheet.col_values(1)))
-    work_sheet.delete_row(2)
+    # print(len(work_sheet.col_values(1)))
+    # work_sheet.delete_row(2)
     # return results
+    try:
+        spread_sheet.worksheet('no worksheet!')
+    except gspread.exceptions.WorksheetNotFound:
+        spread_sheet.add_worksheet('no worksheet!', 1, 1000)
+    print('done')
     return work_sheet
 
 
