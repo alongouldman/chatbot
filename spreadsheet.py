@@ -33,9 +33,13 @@ def add_to_sheet(expense):
         work_sheet = spread_sheet.worksheet(sheet_name)
     except gspread.exceptions.WorksheetNotFound:
         # create worksheet
-        work_sheet = spread_sheet.add_worksheet(sheet_name, 1, 1000)
-        work_sheet.insert_row(['date', 'amount', 'category', 'details'])  # add headers
-        work_sheet.resize(1)
+        # work_sheet = spread_sheet.add_worksheet(sheet_name, 1, 1000)
+        # work_sheet.insert_row(['date', 'amount', 'category', 'details'])  # add headers
+        # work_sheet.resize(1)
+
+        master_sheet_index = len(spread_sheet.worksheets())
+        master_sheet = spread_sheet.get_worksheet(master_sheet_index - 1)
+        work_sheet = master_sheet.duplicate(new_sheet_name=sheet_name)
 
     # date = ".".join([expense.date.day, expense.date.month, expense.date.year])
     date = f"{expense.date:%d.%m.%Y}"
@@ -46,7 +50,11 @@ def add_to_sheet(expense):
 
 
 def pop():
-    work_sheet = get_spreadsheet().worksheets()[-1]  # delete from last worksheet
+    '''
+    this function deletes the last row added the the spreadsheet
+    :return: the row deleted, in a form of a list
+    '''
+    work_sheet = get_spreadsheet().sheet1 # delete from first worksheet
     length = len(work_sheet.col_values(1))
     if length < 2:  # no rows!
         raise NoRowsError
