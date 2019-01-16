@@ -6,8 +6,11 @@ from custom_errors import *
 
 
 def get_credentials(scope):
-    keyfile_dict = json.loads(os.environ['BOT_GOOGLE_SECRET'])
-    creds = ServiceAccountCredentials.from_json_keyfile_dict(keyfile_dict, scope)
+    try:
+        creds = ServiceAccountCredentials.from_json_keyfile_name('client_secret.json',scope)
+    except:
+        keyfile_dict = json.loads(os.environ['BOT_GOOGLE_SECRET'])
+        creds = ServiceAccountCredentials.from_json_keyfile_dict(keyfile_dict, scope)
     return creds
 
 

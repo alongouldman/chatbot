@@ -1,6 +1,10 @@
 .idea
+.idea/
 bot_token.txt
 trying.py
 client_secret.json
 environ_secret.txt
 bfg.jar
+__pycache__/
+.ipynb_checkpoints/
+.ipynb_checkpoints

@@ -73,7 +73,6 @@ def expense_parse(message):
             חסר סכום. כמה כסף בזבזת?
             ''')
     else:
-        bot.reply_to(message, expense)
         try:
             add_to_sheet(expense)
         except Exception as err:
