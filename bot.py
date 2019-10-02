@@ -9,11 +9,15 @@ from spreadsheet import *
 
 # get the bot token from the enviroment variable.
 # note: you must add a bot token to your environment to make this bit work, and save it with the name 'BOT_TOKEN'
-TOKEN = os.environ['BOT_TOKEN']
+try:
+    TOKEN = os.environ['BOT_TOKEN']
+except Exception as e:
+    raise e
 bot = telebot.TeleBot(TOKEN)
 
 
-# TODO: add feacher request list in the sheets
+# TODO: add feature
+#  r request list in the sheets
 # TODO: add sheets to each month
 
 
