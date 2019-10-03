@@ -2,17 +2,18 @@
 import telebot
 import time
 import os
-from chatbot.custom_errors import *
-from chatbot.expense import Expense
-from chatbot.spreadsheet import *
 
+from custom_errors import NoRowsError, NoCategoryError, NoAmountError
+from expense import Expense
+from spreadsheet import pop, add_to_sheet
 
 # get the bot token from the enviroment variable.
 # note: you must add a bot token to your environment to make this bit work, and save it with the name 'BOT_TOKEN'
 try:
     TOKEN = os.environ['BOT_TOKEN']
 except KeyError:
-    pass
+    with open(os.path.join(os.getcwd(),'bot_token.txt'), 'r') as f:
+        TOKEN = f.read()
 bot = telebot.TeleBot(TOKEN)
 
 

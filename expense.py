@@ -1,5 +1,5 @@
-from custom_errors import *
-from utils import *
+from custom_errors import NoAmountError, NoCategoryError
+from utils import remove_money_words, get_amount, get_time
 
 
 class Expense:
