@@ -4,7 +4,7 @@ import time
 import os
 from chatbot.custom_errors import *
 from chatbot.expense import Expense
-from chatbot.spreadsheet import *
+from chatbot.spreadsheet import pop
 
 
 # get the bot token from the enviroment variable.
