@@ -1,5 +1,5 @@
-from chatbot.custom_errors import NoAmountError, NoCategoryError
-from chatbot.utils import remove_money_words, get_amount, get_time
+from custom_errors import NoAmountError, NoCategoryError
+from utils import remove_money_words, get_amount, get_time
 
 
 class Expense:
