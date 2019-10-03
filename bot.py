@@ -3,7 +3,7 @@ import telebot
 import time
 import os
 
-from chatbot.custom_errors import NoRowsError, NoCategoryError, NoAmountError
+from custom_errors import NoRowsError, NoCategoryError, NoAmountError
 from chatbot.expense import Expense
 from chatbot.spreadsheet import pop, add_to_sheet
 
