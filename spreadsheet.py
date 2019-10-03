@@ -2,7 +2,7 @@ import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 import os
 import json
-from custom_errors import *
+from chatbot.custom_errors import *
 
 
 def get_credentials(scope):

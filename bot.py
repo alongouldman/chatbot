@@ -2,41 +2,18 @@
 import telebot
 import time
 import os
-from custom_errors import *
-from expense import Expense
-from spreadsheet import *
+from chatbot.custom_errors import *
+from chatbot.expense import Expense
+from chatbot.spreadsheet import *
 
 
 # get the bot token from the enviroment variable.
 # note: you must add a bot token to your environment to make this bit work, and save it with the name 'BOT_TOKEN'
 try:
     TOKEN = os.environ['BOT_TOKEN']
-except Exception as e:
-    raise e
+except KeyError:
+    pass
 bot = telebot.TeleBot(TOKEN)
-
-
-# TODO: add feature
-#  r request list in the sheets
-# TODO: add sheets to each month
-
-
-# @bot.message_handler(commands=['sheet'])
-# def google_sheets(message):
-#     msg = ""
-#     records = get_records()
-#     for i in records:
-#         msg += f"date: {i['date']}, amount: {i['amount']}, category: {i['category']}\n"
-#     bot.reply_to(message, msg)
-
-
-# @bot.message_handler(commands=['test'])
-# def test_words(message):
-#     words = get_money_words()
-#     money_words = ""
-#     for i in words:
-#         money_words += i + ' '
-#     bot.reply_to(message, money_words)
 
 
 @bot.message_handler(commands=['start'])
@@ -55,7 +32,6 @@ def delete_last(message):
         for cell in deleted:
             msg += "\n" + cell
         bot.reply_to(message, msg)
-
 
 
 @bot.message_handler(commands=['help'])
