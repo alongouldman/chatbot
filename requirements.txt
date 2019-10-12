@@ -3,4 +3,3 @@ google_api_python_client==1.7.6
 pytz==2018.7
 pyTelegramBotAPI==3.6.6
 oauth2client
-mongoengine==0.18.2

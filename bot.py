@@ -12,7 +12,7 @@ from spreadsheet import pop, add_to_sheet
 try:
     TOKEN = os.environ['BOT_TOKEN']
 except KeyError:
-    with open(os.path.join(os.getcwd(), 'bot_token.txt'), 'r') as f:
+    with open(os.path.join(os.getcwd(),'bot_token.txt'), 'r') as f:
         TOKEN = f.read()
 bot = telebot.TeleBot(TOKEN)
 
