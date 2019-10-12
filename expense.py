@@ -32,5 +32,5 @@ class Expense:
         expense = f"amount: {self.amount}\ncategory: {self.category}"
         if self.expense_details:
             expense += f"\ndetails: {self.expense_details}"
-        expense += f"\ndate: {self.date.day}.{self.date.month}.{self.date.year}"
+        expense+= f"\ndate: {self.date.day}.{self.date.month}.{self.date.year}"
         return expense
