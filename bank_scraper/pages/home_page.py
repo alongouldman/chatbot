@@ -1,6 +1,8 @@
 import os
 import time
 
+from selenium.common.exceptions import NoSuchElementException
+from selenium.webdriver.common.by import By
 from selenium.webdriver.remote.webdriver import WebDriver
 
 from common import BANK_URL
@@ -13,6 +15,7 @@ class BankHomePage(BasePage):
 	_LOGIN_FORM_USERNAME_ID = 'username'
 	_LOGIN_FORM_PASSWORD_ID = 'password'
 	_LOGIN_FORM_BUTTON_ID = 'continueBtn'
+	ERROR_MESSAGE_HOLDER = (By.CLASS_NAME, "ErrorHolder")
 
 	def __init__(self, driver: WebDriver = None):
 		super().__init__(driver)
@@ -26,6 +29,7 @@ class BankHomePage(BasePage):
 		login.click()
 		iframe = self.driver.find_element_by_id('loginFrame')
 		self.driver.switch_to.frame(iframe)
+		# TODO: find a better way to do it 
 		time.sleep(3)
 		username_input = self.driver.find_element_by_id(BankHomePage._LOGIN_FORM_USERNAME_ID)
 		username_input.send_keys(self._get_username())
