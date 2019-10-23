@@ -10,3 +10,4 @@ __pycache__/
 .ipynb_checkpoints
 *__pycache__
 db_connection_string.txt
+bank_login.txt
