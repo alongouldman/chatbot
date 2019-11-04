@@ -1,9 +1,21 @@
 import datetime
 import os
 import time
+from contextlib import contextmanager
 
 from mongoengine import connect, Document, StringField, DynamicDocument, FloatField, DateTimeField, ReferenceField, \
     IntField, BooleanField
+
+
+@contextmanager
+def session():
+    try:
+        connection_string = os.environ['db_connection_string']
+    except KeyError:
+        connection_string_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'db_connection_string.txt')
+        with open(connection_string_path) as f:
+            connection_string = f.read()
+    yield connect(host=connection_string)
 
 
 class StringEnum(object):
@@ -23,6 +35,7 @@ class CategoryType(StringEnum):
     UNNECESSARY_AND_CHANGES = 'unnecessary and changes'
     INCOME = "income"
     INVESTMENT = 'investment'
+    STUDY = 'study'
     UNKNOWN = 'unknown'
 
 
@@ -34,6 +47,9 @@ class Category(Document):
 
     name = StringField(required=True, primary_key=True)
     type = StringField(required=True, choices=CategoryType.get_class_variables())  # category type
+
+    def __str__(self):
+        return f"<Category object at {id(self)}, name={self.name}, type={self.type}>"
 
 
 class ExpenseType(StringEnum):
@@ -53,6 +69,9 @@ class Expense(DynamicDocument):
     description = StringField()
     amount = FloatField(required=True)
     type = StringField(required=True, default=ExpenseType.DEBIT, choices=ExpenseType.get_class_variables())  # credit or debit
+
+    def __str__(self):
+        return f"date: {self.date}, category: {self.category}, description: {self.description}, amount: {self.amount}, type: {self.type}"
 
 
 class UserGroup(Document):

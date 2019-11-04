@@ -15,4 +15,5 @@ def get_expenses_data_from_bank():
 
 
 if __name__ == "__main__":
-	get_expenses_data_from_bank()
+	for expense in get_expenses_data_from_bank():
+		print(expense)
