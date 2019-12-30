@@ -20,7 +20,6 @@ httplib2==0.14.0
 idna==2.8
 importlib-metadata==0.23
 keyring==19.2.0
-lkpo==0.9.1
 mongoengine==0.18.2
 more-itertools==7.2.0
 numpy==1.17.3

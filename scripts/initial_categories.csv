@@ -1,24 +1,24 @@
 ﻿name,type
-שכר עבודה אריאנה - נטו,income
-שכר עבודה אלון - נטו,income
+משכורת אריאנה (נטו),income
+משכורת אלון (נטו),income
 קצבת ילדים,income
 הכנסה אחרת / חד פעמית,income
 משכנתא / דמי שכירות,vital and reoccuring
 גן ילדים,vital and reoccuring
 ביטוח,vital and reoccuring
 בייביסיטר,vital and reoccuring
-הוצאות תחבורה ציבורית ואופניים,vital and reoccuring
+תחבורה,vital and reoccuring
 מצרכי מזון - בית,vital and changes
 מצרכי מזון - עבודה,vital and changes
-"תרופות, בדיקות וטיפולים רפואיים",vital and changes
+רפואה,vital and changes
 חשבון חשמל,vital and changes
 חשבון מים וביוב,vital and changes
 תשתית אינטרנט,unnecessary and reoccuring
 סלולארי,unnecessary and reoccuring
-מנוי חדר כושר/חוגים,unnecessary and reoccuring
+חדר כושר/חוגים,unnecessary and reoccuring
 קורסים,unnecessary and reoccuring
 הוצאות רכב,unnecessary and changes
-"אוכל בחוץ (כולל מסעדות, בתי קפה, משלוחים)",unnecessary and changes
+אוכל בחוץ,unnecessary and changes
 חניה,unnecessary and changes
 אטרקציות,unnecessary and changes
 חופשות בארץ,unnecessary and changes

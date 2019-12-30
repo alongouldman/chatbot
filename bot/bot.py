@@ -1,20 +1,14 @@
 # from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
 import telebot
 import time
-import os
 
+from bot_utils import get_bot_token
 from custom_errors import NoRowsError, NoCategoryError, NoAmountError
 from expense import Expense
 from spreadsheet import pop, add_to_sheet
 
-# get the bot token from the enviroment variable.
-# note: you must add a bot token to your environment to make this bit work, and save it with the name 'BOT_TOKEN'
-try:
-    TOKEN = os.environ['BOT_TOKEN']
-except KeyError:
-    with open(os.path.join(os.getcwd(), 'bot_token.txt'), 'r') as f:
-        TOKEN = f.read()
-bot = telebot.TeleBot(TOKEN)
+
+bot = telebot.TeleBot(get_bot_token())
 
 
 @bot.message_handler(commands=['start'])
@@ -64,10 +58,11 @@ def expense_parse(message):
             bot.reply_to(message, 'expense not added from some reason, sorry....\n#not_added')
 
 
-print("bot started")
-while True:
-    try:
-        bot.polling()
-    except:
-        time.sleep(2)
+if __name__ == "__main__":
+    print("bot started")
+    while True:
+        try:
+            bot.polling()
+        except:
+            time.sleep(2)
 

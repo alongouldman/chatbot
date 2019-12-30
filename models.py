@@ -1,21 +1,37 @@
 import datetime
 import os
-import time
-from contextlib import contextmanager
-
 from mongoengine import connect, Document, StringField, DynamicDocument, FloatField, DateTimeField, ReferenceField, \
-    IntField, BooleanField
+    IntField, BooleanField, get_connection, MongoEngineConnectionError, EmbeddedDocumentListField, EmbeddedDocument
+from mongoengine.queryset.visitor import Q
+import logging
 
 
-@contextmanager
-def session():
+# Enable logging
+logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+
+def ensure_db_connection(func):
+    def inner(*args, **kwargs):
+        try:
+            get_connection()
+        except MongoEngineConnectionError:
+            logger.info("no DB connection, connecting to DB....")
+            init_session()
+        return func(*args, **kwargs)
+    return inner
+
+
+def init_session():
     try:
         connection_string = os.environ['db_connection_string']
     except KeyError:
         connection_string_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'db_connection_string.txt')
         with open(connection_string_path) as f:
             connection_string = f.read()
-    yield connect(host=connection_string)
+    connection = connect(host=connection_string)
+    logger.info("DB connected")
+    return connection
 
 
 class StringEnum(object):
@@ -26,6 +42,29 @@ class StringEnum(object):
             if not key.startswith('__'):
                 wanted_values.append(value)
         return wanted_values
+
+
+class ExpenseType(StringEnum):
+    CREDIT = 'credit'
+    DEBIT = 'debit'
+
+
+class Expense(EmbeddedDocument):
+
+    meta = {
+        'collection': 'expenses'
+    }
+
+    date = DateTimeField(required=True)
+    # TODO: should I do that?
+    # category = ReferenceField(Category, required=True, default=CategoryType.UNKNOWN)
+    remember_category = BooleanField(required=True, default=True)
+    description = StringField()
+    amount = FloatField(required=True)
+    type = StringField(required=True, default=ExpenseType.DEBIT, choices=ExpenseType.get_class_variables())  # credit or debit
+
+    def __str__(self):
+        return f"date: {self.date} description: {self.description} amount: {self.amount} type: {self.type}"
 
 
 class CategoryType(StringEnum):
@@ -45,37 +84,17 @@ class Category(Document):
         'collection': 'categories'
     }
 
-    name = StringField(required=True, primary_key=True)
+    name = StringField(required=True)
     type = StringField(required=True, choices=CategoryType.get_class_variables())  # category type
+    expenses = EmbeddedDocumentListField(Expense, default=[])
 
     def __str__(self):
-        return f"<Category object at {id(self)}, name={self.name}, type={self.type}>"
+        return f"id={self.id}, name={self.name}, type={self.type}"
 
-
-class ExpenseType(StringEnum):
-    CREDIT = 'credit'
-    DEBIT = 'debit'
-    
-
-class Expense(DynamicDocument):
-
-    meta = {
-        'collection': 'expenses'
-    }
-
-    date = DateTimeField(required=True)
-    category = ReferenceField(Category, required=True, default=CategoryType.UNKNOWN)
-    remember_category = BooleanField(required=True, default=True)
-    description = StringField()
-    amount = FloatField(required=True)
-    type = StringField(required=True, default=ExpenseType.DEBIT, choices=ExpenseType.get_class_variables())  # credit or debit
-
-    def __str__(self):
-        return f"date: {self.date}, category: {self.category}, description: {self.description}, amount: {self.amount}, type: {self.type}"
-
-
-class UserGroup(Document):
-    pass
+    def exists(self):
+        if Category.objects(Q(name=self.name) & Q(type=self.type)):
+            return True
+        return False
 
 
 if __name__ == "__main__":
@@ -85,9 +104,8 @@ if __name__ == "__main__":
         with open('db_connection_string.txt') as f:
             connection_string = f.read()
     connect(host=connection_string, connect=False)
+    print("DB is conected")
 
-    # TODO: mechanizem for connectin to db
-    # TODO: add all initial categories from csv
     cat1 = Category('אוכל', type=CategoryType.VITAL_AND_CHANGES)
     cat2 = Category('ביגוד', type=CategoryType.VITAL_AND_CHANGES)
     cat3 = Category('תחבורה', type=CategoryType.VITAL_AND_CHANGES)
@@ -96,10 +114,12 @@ if __name__ == "__main__":
     cat2.save()
     cat3.save()
     cat4.save()
+
     expense1 = Expense(date=datetime.date.today(),
                        amount=24.32,
-                       category=cat1,
                        description="something"
                        )
+
+    Category.objects(name='אוכל')
     expense1.save()
     print("done")
