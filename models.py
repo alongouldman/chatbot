@@ -1,12 +1,17 @@
 import datetime
 import os
-from mongoengine import connect, Document, StringField, DynamicDocument, FloatField, DateTimeField, ReferenceField, \
-    IntField, BooleanField, get_connection, MongoEngineConnectionError, EmbeddedDocumentListField, EmbeddedDocument
+import random
+
+import pandas
+from mongoengine import connect, Document, StringField, FloatField, DateTimeField, \
+    IntField, BooleanField, get_connection, MongoEngineConnectionError, EmbeddedDocumentListField, EmbeddedDocument, \
+    ListField
 from mongoengine.queryset.visitor import Q
 import logging
 
 
 # Enable logging
+
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 logger = logging.getLogger(__name__)
 
@@ -78,7 +83,7 @@ class CategoryType(StringEnum):
     UNKNOWN = 'unknown'
 
 
-class Category(Document):
+class Category(EmbeddedDocument):
 
     meta = {
         'collection': 'categories'
@@ -88,13 +93,53 @@ class Category(Document):
     type = StringField(required=True, choices=CategoryType.get_class_variables())  # category type
     expenses = EmbeddedDocumentListField(Expense, default=[])
 
-    def __str__(self):
-        return f"id={self.id}, name={self.name}, type={self.type}"
+    def __repr__(self):
+        return f"name={self.name}, type={self.type}"
 
-    def exists(self):
-        if Category.objects(Q(name=self.name) & Q(type=self.type)):
-            return True
-        return False
+
+class TelegramGroup(Document):
+    meta = {
+        'collection': 'telegram_groups'
+    }
+
+    telegram_chat_id = StringField(required=True, unique=True)
+    categories = EmbeddedDocumentListField(Category, default=[])
+    user_ids = ListField(default=[])
+
+    def init_categories(self):
+        df = pandas.read_csv('scripts/initial_categories.csv')
+        unknown_category = Category(CategoryType.UNKNOWN, type=CategoryType.UNKNOWN)
+        self.add_category(unknown_category)
+
+        for index, row in df.iterrows():
+            category = Category()
+            category.name = row['name']
+            category.type = row['type']
+
+            self.add_category(category)
+            logging.info(f'category {category} saved')
+
+    def __repr__(self):
+        return f"users: {self.user_ids}"
+
+    def add_category(self, category: Category):
+        if category not in self.categories:  # todo: how do I check that it does not exists?
+            self.categories.append(category)
+        else:
+            raise RuntimeError
+
+
+# class BankAccount(EmbeddedDocument):
+#     hashed_username
+#     hashed_password
+#     type
+#
+# class User(Document):
+#     telegram_user_id
+#     bank_accounts =
+#     salt
+#     email
+#     hashed_password
 
 
 if __name__ == "__main__":
@@ -105,21 +150,24 @@ if __name__ == "__main__":
             connection_string = f.read()
     connect(host=connection_string, connect=False)
     print("DB is conected")
-
-    cat1 = Category('אוכל', type=CategoryType.VITAL_AND_CHANGES)
-    cat2 = Category('ביגוד', type=CategoryType.VITAL_AND_CHANGES)
-    cat3 = Category('תחבורה', type=CategoryType.VITAL_AND_CHANGES)
-    cat4 = Category(CategoryType.UNKNOWN, type=CategoryType.UNKNOWN)
-    cat1.save()
-    cat2.save()
-    cat3.save()
-    cat4.save()
-
     expense1 = Expense(date=datetime.date.today(),
                        amount=24.32,
                        description="something"
                        )
 
-    Category.objects(name='אוכל')
-    expense1.save()
+    cat1 = Category('אוכל', type=CategoryType.VITAL_AND_CHANGES, expenses=[expense1])
+    cat2 = Category('אוכל', type=CategoryType.VITAL_AND_CHANGES)
+    cat3 = Category('תחבורה', type=CategoryType.VITAL_AND_CHANGES)
+    cat4 = Category(CategoryType.UNKNOWN, type=CategoryType.UNKNOWN)
+    group = TelegramGroup(telegram_chat_id=str(random.randint(0, 1000)))
+    group.init_categories()
+    group.save()
+    group.add_category(cat1)
+    group.add_category(cat2)
+    group.add_category(cat1)
+    group.add_category(cat1)
+    group.save()
+
+    # Category.objects(name='אוכל')
+    # expense1.save()
     print("done")
