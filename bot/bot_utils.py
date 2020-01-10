@@ -3,6 +3,8 @@ import re
 from datetime import datetime
 from typing import Optional
 
+import pytz
+import telegram
 from pytz import timezone
 
 # =====================================
@@ -27,14 +29,15 @@ def extract_number(user_input) -> Optional[int]:
     return int(number[0])
 
 
-def get_time(message):
+def get_message_date(message: telegram.message.Message) -> datetime:
     '''
     :param message: telegramAPI message object
     :return: a datetime object
     '''
-    unix_time = int(message.date)
-    date = datetime.fromtimestamp(unix_time , timezone('Israel'))
-    return date
+    datetime = message.date.replace(tzinfo=pytz.utc)
+    israel_time_zone = pytz.timezone('Israel')
+    datetime = datetime.astimezone(israel_time_zone)
+    return datetime
 
 
 def remove_money_words(all_words):

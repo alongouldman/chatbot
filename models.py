@@ -49,11 +49,6 @@ class StringEnum(object):
         return wanted_values
 
 
-class ExpenseType(StringEnum):
-    CREDIT = 'credit'
-    DEBIT = 'debit'
-
-
 class Expense(EmbeddedDocument):
 
     meta = {
@@ -61,15 +56,12 @@ class Expense(EmbeddedDocument):
     }
 
     date = DateTimeField(required=True)
-    # TODO: should I do that?
-    # category = ReferenceField(Category, required=True, default=CategoryType.UNKNOWN)
     remember_category = BooleanField(required=True, default=True)
     description = StringField()
     amount = FloatField(required=True)
-    type = StringField(required=True, default=ExpenseType.DEBIT, choices=ExpenseType.get_class_variables())  # credit or debit
 
     def __str__(self):
-        return f"date: {self.date} description: {self.description} amount: {self.amount} type: {self.type}"
+        return f"<Expense object, date: {self.date} description: {self.description} amount: {self.amount}>"
 
 
 class CategoryType(StringEnum):
@@ -89,12 +81,15 @@ class Category(EmbeddedDocument):
         'collection': 'categories'
     }
 
-    name = StringField(required=True)
+    name = StringField(required=True)  # most be unique
     type = StringField(required=True, choices=CategoryType.get_class_variables())  # category type
     expenses = EmbeddedDocumentListField(Expense, default=[])
 
+    def __str__(self):
+        return f"<Category object: name={self.name}, type={self.type}>"
+
     def __repr__(self):
-        return f"name={self.name}, type={self.type}"
+        return self.__str__()
 
 
 class TelegramGroup(Document):
@@ -116,17 +111,20 @@ class TelegramGroup(Document):
             category.name = row['name']
             category.type = row['type']
 
-            self.add_category(category)
-            logging.info(f'category {category} saved')
+            try:
+                self.add_category(category)
+                logging.info(f'category {category} saved')
+            except RuntimeError as e:
+                logging.error(e)
 
     def __repr__(self):
-        return f"users: {self.user_ids}"
+        return f"<TelegramGroup object, id={self.telegram_chat_id} user_ids={self.user_ids}>"
 
     def add_category(self, category: Category):
-        if category not in self.categories:  # todo: how do I check that it does not exists?
-            self.categories.append(category)
-        else:
-            raise RuntimeError
+        exists = any([cat.name == category.name for cat in self.categories])
+        if not exists:
+            return self.categories.append(category)
+        raise RuntimeError(f"category with name={category.name} already exists")
 
 
 # class BankAccount(EmbeddedDocument):
