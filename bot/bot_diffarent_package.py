@@ -10,6 +10,7 @@ from telegram.utils.promise import Promise
 from bot_utils import get_bot_token, extract_number, get_message_date
 # ================ Bot massages ================
 from models import Category, ensure_db_connection, CategoryType, Expense, TelegramGroup
+from spreadsheet import add_to_sheet
 
 ASK_USER_FOR_CATEGORY = """
 איזה קטגוריה ההוצאה?
@@ -202,6 +203,10 @@ def get_category_and_save_expense(update, context):
 
 	category.expenses.append(expense)
 	group.save()
+
+	# also save to spreadsheet. this is temporary, until I add the UI
+	add_to_sheet(expense)
+
 	logger.info(f"saving expense: {expense} to category {category} in group {group}")
 	update.callback_query.bot.send_message(update.callback_query.message.chat_id, "ההוצאה הוזנה בהצלחה")
 	return ConversationHandler.END

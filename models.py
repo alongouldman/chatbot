@@ -5,7 +5,7 @@ import random
 import pandas
 from mongoengine import connect, Document, StringField, FloatField, DateTimeField, \
     IntField, BooleanField, get_connection, MongoEngineConnectionError, EmbeddedDocumentListField, EmbeddedDocument, \
-    ListField
+    ListField, ReferenceField
 from mongoengine.queryset.visitor import Q
 import logging
 
@@ -49,19 +49,7 @@ class StringEnum(object):
         return wanted_values
 
 
-class Expense(EmbeddedDocument):
 
-    meta = {
-        'collection': 'expenses'
-    }
-
-    date = DateTimeField(required=True)
-    remember_category = BooleanField(required=True, default=True)
-    description = StringField()
-    amount = FloatField(required=True)
-
-    def __str__(self):
-        return f"<Expense object, date: {self.date} description: {self.description} amount: {self.amount}>"
 
 
 class CategoryType(StringEnum):
@@ -75,7 +63,7 @@ class CategoryType(StringEnum):
     UNKNOWN = 'unknown'
 
 
-class Category(EmbeddedDocument):
+class Category(Document):
 
     meta = {
         'collection': 'categories'
@@ -83,7 +71,6 @@ class Category(EmbeddedDocument):
 
     name = StringField(required=True)  # most be unique
     type = StringField(required=True, choices=CategoryType.get_class_variables())  # category type
-    expenses = EmbeddedDocumentListField(Expense, default=[])
 
     def __str__(self):
         return f"<Category object: name={self.name}, type={self.type}>"
@@ -126,6 +113,23 @@ class TelegramGroup(Document):
             return self.categories.append(category)
         raise RuntimeError(f"category with name={category.name} already exists")
 
+
+# TODO: change this into not embedded document
+class Expense(Document):
+
+    meta = {
+        'collection': 'expenses'
+    }
+
+    date = DateTimeField(required=True)
+    remember_category = BooleanField(required=True, default=True)
+    description = StringField()
+    amount = FloatField(required=True)
+    category = ReferenceField(Category, required=True, default=Category(name=CategoryType.UNKNOWN))
+    telegram_group = ReferenceField(TelegramGroup)
+
+    def __str__(self):
+        return f"<Expense object, date: {self.date} description: {self.description} amount: {self.amount}>"
 
 # class BankAccount(EmbeddedDocument):
 #     hashed_username
