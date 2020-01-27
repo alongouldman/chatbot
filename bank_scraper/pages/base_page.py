@@ -1,3 +1,5 @@
+import os
+
 from selenium.webdriver.remote.webdriver import WebDriver
 from selenium import webdriver
 from webdriver_manager.chrome import ChromeDriverManager
@@ -24,6 +26,10 @@ class BasePage(object):
 
 	@staticmethod
 	def init_driver():
-		driver = webdriver.Chrome(ChromeDriverManager().install())
+		options = webdriver.ChromeOptions()
+		options.add_argument('headless')
+
+		driver = webdriver.Chrome(ChromeDriverManager().install(), chrome_options=options)
+		# driver = webdriver.PhantomJS(executable_path=os.path.join(os.getcwd(), 'bank_scraper', 'phantomjs_installer/bin/phantomjs'))
 		driver.implicitly_wait(10)
 		return driver
