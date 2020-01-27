@@ -88,7 +88,7 @@ class Category(Document):
         existing_categories = Category.objects()
         df = pandas.read_csv('scripts/initial_categories.csv')
         if not existing_categories.filter(name=CategoryType.UNKNOWN):
-            unknown_category = Category(CategoryType.UNKNOWN, type=CategoryType.UNKNOWN)
+            unknown_category = Category(name=CategoryType.UNKNOWN, type=CategoryType.UNKNOWN)
             unknown_category.save()
             logging.info(f'category {unknown_category} saved')
 
@@ -106,7 +106,7 @@ class Category(Document):
                     logging.error(e)
             else:
                 logging.info(f"category {row['name']} exists")
-                
+
 
 class TelegramGroup(Document):
     meta = {
