@@ -41,7 +41,7 @@ def add_to_sheet(expense):
         work_sheet = master_sheet.duplicate(new_sheet_name=sheet_name)
 
     date = f"{expense.date:%d.%m.%Y}"
-    new_row = [date, expense.amount, expense.category]
+    new_row = [date, expense.amount, expense.category.name]
     if expense.description:
         new_row.append(expense.description)
     work_sheet.append_row(new_row)

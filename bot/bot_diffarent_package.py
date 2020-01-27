@@ -1,7 +1,9 @@
 # TODO: rename to bot and remove the other one
 import logging
+from collections import defaultdict
 from typing import List, Tuple
 
+from bson.son import SON
 from telegram import (ReplyKeyboardRemove, Update, InlineKeyboardButton, InlineKeyboardMarkup, Bot)
 from telegram.ext import (Updater, CommandHandler, MessageHandler, Filters,
 						  ConversationHandler, CallbackContext, run_async, CallbackQueryHandler)
@@ -46,11 +48,22 @@ logger = logging.getLogger(__name__)
 
 @run_async
 @ensure_db_connection
-def get_categories(group: Promise) -> Promise:
-	group: TelegramGroup = group.result()
-	categories = group.categories
-	logger.info("got categories from db")
-	group.save()
+def get_categories(telegram_group: Promise) -> Promise:
+	logger.info("getting categories from db")
+	categories = Category.objects()  # TODO: filter unknown category
+	if not categories:
+		Category.init_categories()
+		categories = Category.objects() # TODO: filter unknown category
+
+	categories = [c for c in categories if c.type != CategoryType.UNKNOWN]  # remove unknown category - this will be used for bank scraper
+	# TODO: filter only relevant expenses!
+	pipeline = [
+		{"$match": {'telegram_group': telegram_group.result().telegram_chat_id}},
+		{"$group": {"_id": "$category", "count": {"$sum": 1}}}
+	]
+	categories_count = list(Expense.objects().aggregate(pipeline))
+	categories_count = {count['_id']: count['count'] for count in categories_count}
+	categories.sort(key=lambda c: categories_count.get(c.name, 0), reverse=True)
 	return categories
 
 
@@ -62,8 +75,7 @@ def get_or_create_group(chat_id: int, user_id: int) -> Promise:
 	group = TelegramGroup.objects(telegram_chat_id=chat_id).first()
 	if not group:
 		group = TelegramGroup(telegram_chat_id=chat_id)
-		group.init_categories()
-	# add user to group ids, non blocking
+	# add user to group ids, blocking
 	add_user_to_group(group, user_id)
 	group.save()
 	return group
@@ -77,7 +89,7 @@ def add_user_to_group(group, user_id):
 
 def get_amount_and_ask_about_description(update: Update, context: CallbackContext):
 	# get the categories now and save for later, for better speed
-	group = get_or_create_group(update.message.chat_id, update.message.from_user.id)
+	group: Promise = get_or_create_group(update.message.chat_id, update.message.from_user.id)
 	categories: Promise = get_categories(group)
 	context.chat_data['categories_promise'] = categories
 	context.chat_data['telegram_group_promise'] = group
@@ -138,8 +150,6 @@ def ask_about_categories(update: Update, context: CallbackContext, is_callback: 
 
 	message = bot.send_message(chat_id, LOADING_CATEGORIES)
 	categories = context.chat_data['categories_promise'].result()  # get the calculated results of the promise
-	categories = [c for c in categories if c.type != CategoryType.UNKNOWN]  # remove unknown category - this will be used for bank scraper
-	categories.sort(key=lambda cat: len(cat.expenses), reverse=True)
 	context.chat_data['all_categories'] = categories
 	displayed_categories = []
 	reply_markup, displayed_categories = get_categories_markup(categories[:10], displayed_categories, add_load_more_categories_button=True)
@@ -191,8 +201,8 @@ def get_category_and_save_expense(update, context):
 	category_name = update.callback_query.data
 	logging.info(f"got category: {category_name}")
 	expense = context.chat_data['expense']
-	group = context.chat_data['telegram_group_promise'].result()
-	category = next(cat for cat in group.categories if cat.name == category_name)
+	categories = context.chat_data['all_categories']
+	category = next(cat for cat in categories if cat.name == category_name)
 
 	# understand if expense is credit or debit
 	if category.type == CategoryType.INCOME:
@@ -201,14 +211,17 @@ def get_category_and_save_expense(update, context):
 	elif expense.amount > 0:
 		expense.amount = expense.amount * -1  # makes it negative
 
-	category.expenses.append(expense)
-	group.save()
+	expense.category = category
 
-	# also save to spreadsheet. this is temporary, until I add the UI
-	add_to_sheet(expense)
+	group = context.chat_data['telegram_group_promise'].result()
+	expense.telegram_group = group
+	expense.save()
 
 	logger.info(f"saving expense: {expense} to category {category} in group {group}")
 	update.callback_query.bot.send_message(update.callback_query.message.chat_id, "ההוצאה הוזנה בהצלחה")
+
+	# also save to spreadsheet. this is temporary, until I add the UI
+	add_to_sheet(expense)
 	return ConversationHandler.END
 
 
@@ -254,7 +267,8 @@ def main():
 		},
 
 		fallbacks=[CommandHandler('cancel', cancel)],
-		conversation_timeout=1000
+		conversation_timeout=1000,
+		allow_reentry=True
 	)
 
 	dp.add_handler(conv_handler)

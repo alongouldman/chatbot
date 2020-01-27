@@ -2,9 +2,10 @@ import datetime
 import os
 import random
 
+import mongoengine
 import pandas
 from mongoengine import connect, Document, StringField, FloatField, DateTimeField, \
-    IntField, BooleanField, get_connection, MongoEngineConnectionError, EmbeddedDocumentListField, EmbeddedDocument, \
+    IntField, BooleanField, get_connection, EmbeddedDocumentListField, EmbeddedDocument, \
     ListField, ReferenceField
 from mongoengine.queryset.visitor import Q
 import logging
@@ -20,7 +21,7 @@ def ensure_db_connection(func):
     def inner(*args, **kwargs):
         try:
             get_connection()
-        except MongoEngineConnectionError:
+        except mongoengine.connection.ConnectionFailure:
             logger.info("no DB connection, connecting to DB....")
             init_session()
         return func(*args, **kwargs)
@@ -49,9 +50,6 @@ class StringEnum(object):
         return wanted_values
 
 
-
-
-
 class CategoryType(StringEnum):
     VITAL_AND_REOCCURING = 'vital and reoccuring'
     VITAL_AND_CHANGES = 'vital and changes'
@@ -69,7 +67,7 @@ class Category(Document):
         'collection': 'categories'
     }
 
-    name = StringField(required=True)  # most be unique
+    name = StringField(required=True, primary_key=True)  # most be unique
     type = StringField(required=True, choices=CategoryType.get_class_variables())  # category type
 
     def __str__(self):
@@ -78,43 +76,56 @@ class Category(Document):
     def __repr__(self):
         return self.__str__()
 
+    def __hash__(self):
+        return hash(self.name)
+
+    def __eq__(self, other):
+        return isinstance(other, Category) and self.name == other.name
+
+    @staticmethod
+    @ensure_db_connection
+    def init_categories():
+        existing_categories = Category.objects()
+        df = pandas.read_csv('scripts/initial_categories.csv')
+        if not existing_categories.filter(name=CategoryType.UNKNOWN):
+            unknown_category = Category(CategoryType.UNKNOWN, type=CategoryType.UNKNOWN)
+            unknown_category.save()
+            logging.info(f'category {unknown_category} saved')
+
+        existing_categories_names = {cat.name for cat in existing_categories.all()}
+        for index, row in df.iterrows():
+            if row['name'] not in existing_categories_names:
+                category = Category()
+                category.name = row['name']
+                category.type = row['type']
+
+                try:
+                    category.save()
+                    logging.info(f'category {category} saved')
+                except RuntimeError as e:
+                    logging.error(e)
+            else:
+                logging.info(f"category {row['name']} exists")
+                
 
 class TelegramGroup(Document):
     meta = {
         'collection': 'telegram_groups'
     }
 
-    telegram_chat_id = StringField(required=True, unique=True)
-    categories = EmbeddedDocumentListField(Category, default=[])
+    telegram_chat_id = StringField(required=True, primary_key=True)
     user_ids = ListField(default=[])
-
-    def init_categories(self):
-        df = pandas.read_csv('scripts/initial_categories.csv')
-        unknown_category = Category(CategoryType.UNKNOWN, type=CategoryType.UNKNOWN)
-        self.add_category(unknown_category)
-
-        for index, row in df.iterrows():
-            category = Category()
-            category.name = row['name']
-            category.type = row['type']
-
-            try:
-                self.add_category(category)
-                logging.info(f'category {category} saved')
-            except RuntimeError as e:
-                logging.error(e)
 
     def __repr__(self):
         return f"<TelegramGroup object, id={self.telegram_chat_id} user_ids={self.user_ids}>"
 
-    def add_category(self, category: Category):
-        exists = any([cat.name == category.name for cat in self.categories])
-        if not exists:
-            return self.categories.append(category)
-        raise RuntimeError(f"category with name={category.name} already exists")
+    # def add_category(self, category: Category):
+    #     exists = any([cat.name == category.name for cat in self.categories])
+    #     if not exists:
+    #         return self.categories.append(category)
+    #     raise RuntimeError(f"category with name={category.name} already exists")
 
 
-# TODO: change this into not embedded document
 class Expense(Document):
 
     meta = {
@@ -125,11 +136,11 @@ class Expense(Document):
     remember_category = BooleanField(required=True, default=True)
     description = StringField()
     amount = FloatField(required=True)
-    category = ReferenceField(Category, required=True, default=Category(name=CategoryType.UNKNOWN))
-    telegram_group = ReferenceField(TelegramGroup)
+    category = ReferenceField(Category, required=True, default=Category(name=CategoryType.UNKNOWN), reverse_delete_rule=mongoengine.NULLIFY)
+    telegram_group = ReferenceField(TelegramGroup, required=True, reverse_delete_rule=mongoengine.CASCADE)
 
     def __str__(self):
-        return f"<Expense object, date: {self.date} description: {self.description} amount: {self.amount}>"
+        return f"<Expense object, date: {self.date} description: {self.description} amount: {self.amount}, category_name={self.category.name}, group_id={self.telegram_group.telegram_chat_id}>"
 
 # class BankAccount(EmbeddedDocument):
 #     hashed_username
@@ -145,30 +156,26 @@ class Expense(Document):
 
 
 if __name__ == "__main__":
+    # TODO: write some tests for the object types...
     try:
         connection_string = os.environ['db_connection_string']
     except KeyError:
         with open('db_connection_string.txt') as f:
             connection_string = f.read()
     connect(host=connection_string, connect=False)
-    print("DB is conected")
-    expense1 = Expense(date=datetime.date.today(),
-                       amount=24.32,
-                       description="something"
-                       )
+    Category.init_categories()
+    group = TelegramGroup.objects().first()
+    # group = TelegramGroup(telegram_chat_id=str(random.randint(0, 1000)))
+    group.save()
+    for i in range(200):
+        expense = Expense(date=datetime.date.today(),
+                           amount=24.32,
+                           description="something")
+        expense.telegram_group = group
+        expense.category = random.choice(Category.objects().all())
+        expense.save()
+        logging.info(f'expense {expense} saved')
 
-    cat1 = Category('אוכל', type=CategoryType.VITAL_AND_CHANGES, expenses=[expense1])
-    cat2 = Category('אוכל', type=CategoryType.VITAL_AND_CHANGES)
-    cat3 = Category('תחבורה', type=CategoryType.VITAL_AND_CHANGES)
-    cat4 = Category(CategoryType.UNKNOWN, type=CategoryType.UNKNOWN)
-    group = TelegramGroup(telegram_chat_id=str(random.randint(0, 1000)))
-    group.init_categories()
-    group.save()
-    group.add_category(cat1)
-    group.add_category(cat2)
-    group.add_category(cat1)
-    group.add_category(cat1)
-    group.save()
 
     # Category.objects(name='אוכל')
     # expense1.save()
