@@ -1,5 +1,5 @@
 from custom_errors import NoAmountError, NoCategoryError
-from utils import remove_money_words, get_amount, get_time
+from bot_utils import remove_money_words, get_amount, get_message_date
 
 
 class Expense:
@@ -26,7 +26,7 @@ class Expense:
             self.expense_details.rstrip()
 
         # input date
-        self.date = get_time(message)
+        self.date = get_message_date(message)
 
     def __repr__(self):
         expense = f"amount: {self.amount}\ncategory: {self.category}"
