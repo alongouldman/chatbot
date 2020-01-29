@@ -11,3 +11,6 @@ if __name__ == "__main__":
 	print("hello inside main")
 	logging.info("hello logs from main")
 	logger.info("hello logger from main")
+	while True:
+		logger.info("loop")
+
