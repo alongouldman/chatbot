@@ -116,11 +116,10 @@ def get_description_and_ask_about_category(update, context):
 	return ask_about_categories(update, context)
 
 
-def get_categories_markup(categories: list, displayed_categories: list, add_load_more_categories_button=False) -> Tuple[InlineKeyboardMarkup, list]:
+def get_categories_markup(categories: list, add_load_more_categories_button=False) -> Tuple[InlineKeyboardMarkup, list]:
 	reply_keyboard = []
 	row = []
 	for category in categories:
-		displayed_categories.append(category)
 		row.append(InlineKeyboardButton(category.name, callback_data=category.name))
 		if len(row) == 2:
 			reply_keyboard.append(row)
@@ -132,7 +131,7 @@ def get_categories_markup(categories: list, displayed_categories: list, add_load
 	if add_load_more_categories_button:
 		reply_keyboard.append([InlineKeyboardButton(LOAD_MORE_CATEGORIES, callback_data=LOAD_MORE_CATEGORIES)])
 	reply_markup = InlineKeyboardMarkup(reply_keyboard)
-	return reply_markup, displayed_categories
+	return reply_markup
 
 
 def ask_about_categories(update: Update, context: CallbackContext, is_callback: bool = False):
@@ -151,9 +150,8 @@ def ask_about_categories(update: Update, context: CallbackContext, is_callback: 
 	message = bot.send_message(chat_id, LOADING_CATEGORIES)
 	categories = context.chat_data['categories_promise'].result()  # get the calculated results of the promise
 	context.chat_data['all_categories'] = categories
-	displayed_categories = []
-	reply_markup, displayed_categories = get_categories_markup(categories[:10], displayed_categories, add_load_more_categories_button=True)
-	context.chat_data['displayed_categories'] = displayed_categories
+	reply_markup = get_categories_markup(categories[:10], add_load_more_categories_button=True)
+	context.chat_data['displayed_categories'] = categories[:10]
 	message.edit_text(CHOOSE_CATEGORY, reply_markup=reply_markup)
 	return CATEGORY
 
@@ -186,13 +184,13 @@ def handle_forget_category(update, context):
 def handle_load_more_categories(update, context):
 	logging.info("loading more categories")
 	displayed_categories = context.chat_data['displayed_categories']
-	categories = context.chat_data['all_categories']
-	not_displayed_categories = [c for c in categories if c not in displayed_categories]
-	load_more = True if len(not_displayed_categories) - len(displayed_categories) > 10 else False
+	all_categories = context.chat_data['all_categories']
+	not_displayed_categories = [c for c in all_categories if c not in displayed_categories]
+	load_more = True if len(not_displayed_categories) > 10 else False
 	# load another 10
-	reply_markup, displayed_categories = get_categories_markup(displayed_categories + not_displayed_categories[:10], displayed_categories,
-	                                                           add_load_more_categories_button=load_more)
-	context.chat_data['displayed_categories'] = displayed_categories
+	categories_to_display = displayed_categories + not_displayed_categories[:10]
+	reply_markup = get_categories_markup(categories_to_display, add_load_more_categories_button=load_more)
+	context.chat_data['displayed_categories'] = categories_to_display
 	update.callback_query.message.edit_text(CHOOSE_CATEGORY, reply_markup=reply_markup)
 	return CATEGORY
 
