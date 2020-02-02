@@ -1,12 +1,13 @@
 # TODO: rename to bot and remove the other one
 import logging
-from collections import defaultdict
-from typing import List, Tuple
+from typing import Tuple, List
+from uuid import uuid4
 
-from bson.son import SON
-from telegram import (ReplyKeyboardRemove, Update, InlineKeyboardButton, InlineKeyboardMarkup, Bot)
+from telegram import (Update, InlineKeyboardButton, InlineKeyboardMarkup, Bot, InlineQueryResultArticle,
+                      InputTextMessageContent, ParseMode)
 from telegram.ext import (Updater, CommandHandler, MessageHandler, Filters,
-						  ConversationHandler, CallbackContext, run_async, CallbackQueryHandler)
+                          ConversationHandler, CallbackContext, run_async, CallbackQueryHandler, InlineQueryHandler)
+from telegram.utils.helpers import escape_markdown
 from telegram.utils.promise import Promise
 
 from bot_utils import get_bot_token, extract_number, get_message_date
@@ -53,9 +54,10 @@ def get_categories(telegram_group: Promise) -> Promise:
 	categories = Category.objects()  # TODO: filter unknown category
 	if not categories:
 		Category.init_categories()
-		categories = Category.objects() # TODO: filter unknown category
+		categories = Category.objects()  # TODO: filter unknown category
 
-	categories = [c for c in categories if c.type != CategoryType.UNKNOWN]  # remove unknown category - this will be used for bank scraper
+	categories = [c for c in categories if
+	              c.type != CategoryType.UNKNOWN]  # remove unknown category - this will be used for bank scraper
 	# TODO: filter only relevant expenses!
 	pipeline = [
 		{"$match": {'telegram_group': telegram_group.result().telegram_chat_id}},
@@ -97,7 +99,7 @@ def get_amount_and_ask_about_description(update: Update, context: CallbackContex
 	amount = extract_number(update.message.text)
 	logger.info(f"amount is {amount}")
 	expense = Expense(amount=amount)
-	expense.date = get_message_date(update.message) 
+	expense.date = get_message_date(update.message)
 	context.chat_data['expense'] = expense
 
 	button_row = [InlineKeyboardButton(NO_DESCRIPTION, callback_data=NO_DESCRIPTION)]
@@ -141,7 +143,7 @@ def ask_about_categories(update: Update, context: CallbackContext, is_callback: 
 	else:
 		bot: Bot = update.message.bot
 		chat_id = update.message.chat_id
-		
+
 	# message about not remember category
 	massage = FORGET_CATEGORY_MESSAGE
 	button = InlineKeyboardButton(massage, callback_data=FORGET_CATEGORY)
@@ -177,7 +179,8 @@ def handle_forget_category(update, context):
 		context.chat_data[FORGET_CATEGORY] = not context.chat_data[FORGET_CATEGORY]
 	logging.info(f"remembering category: {context.chat_data[FORGET_CATEGORY]}")
 	change_forget_category_button(update, context)
-	context.chat_data['expense'].remember_category = not context.chat_data[FORGET_CATEGORY]  # "not" because the field is saves as "remember" and not "forget"
+	context.chat_data['expense'].remember_category = not context.chat_data[
+		FORGET_CATEGORY]  # "not" because the field is saves as "remember" and not "forget"
 	return CATEGORY
 
 
@@ -241,6 +244,87 @@ def cancel(update, context):
 	return ConversationHandler.END
 
 
+def query_has_only_amount(query):
+	return len(query.strip().split(' ')) == 1
+
+@run_async
+@ensure_db_connection
+def get_all_categories() -> Promise:
+	logger.info("getting categories from db")
+	categories = Category.objects()
+	if not categories:
+		Category.init_categories()
+		categories = Category.objects()
+
+	# remove unknown category - this will be used for bank scraper
+	categories = [c for c in categories if c.type != CategoryType.UNKNOWN]
+	return categories
+
+
+def get_matching_categories(category_from_user, categories_promise) -> List[Category]:
+	all_categories = categories_promise.result()
+	matching_categories = []
+	for cat in all_categories:
+		if category_from_user in cat.name:
+			matching_categories.append(cat)
+	return matching_categories
+
+
+def get_query_results(amount, matching_categories, expense_details):
+	pass
+
+
+def handle_inline_query(update, context):
+	"""Handle the inline query."""
+	query = update.inline_query.query
+	if not query:
+		return
+	
+	# get categories already from db
+	if 'categories_promise' not in context.chat_data:
+		context.chat_data['categories_promise'] = get_all_categories
+
+	matching_categories = []
+	expense_details = ''
+
+	# the query can be:
+	#   1. only amount
+	#   2. amount and category
+	#   3. amount, description and category
+	amount = extract_number(query)
+	if not query_has_only_amount(query):
+		_, category = query.split(' ', 1)
+		if ',' in category:  # query has category and description
+			expense_details, category = category.split(',')
+		matching_categories = get_matching_categories(category, context.chat_data['categories_promise'])
+
+	results = get_query_results(amount, matching_categories, expense_details)
+	update.inline_query.answer(results)
+
+
+	results = [
+		InlineQueryResultArticle(
+			id=uuid4(),
+			title="Caps",
+			description="will display in capital letters",
+			input_message_content=InputTextMessageContent(
+				query.upper())),
+		InlineQueryResultArticle(
+			id=uuid4(),
+			title="Bold",
+			input_message_content=InputTextMessageContent(
+				"*{}*".format(escape_markdown(query)),
+				parse_mode=ParseMode.MARKDOWN)),
+		InlineQueryResultArticle(
+			id=uuid4(),
+			title="Italic",
+			input_message_content=InputTextMessageContent(
+				"_{}_".format(escape_markdown(query)),
+				parse_mode=ParseMode.MARKDOWN))]
+
+	update.inline_query.answer(results)
+
+
 def main():
 	# Create the Updater and pass it your bot's token.
 	# Make sure to set use_context=True to use the new context based callbacks
@@ -257,7 +341,7 @@ def main():
 
 		states={
 			DESCRIPTION: [MessageHandler(Filters.text, get_description_and_ask_about_category),
-						  CallbackQueryHandler(skip_description_and_ask_about_category, pattern=f"^{NO_DESCRIPTION}$")],
+			              CallbackQueryHandler(skip_description_and_ask_about_category, pattern=f"^{NO_DESCRIPTION}$")],
 
 			CATEGORY: [CallbackQueryHandler(handle_forget_category, pattern=f"^{FORGET_CATEGORY}$"),
 			           CallbackQueryHandler(handle_load_more_categories, pattern=f"^{LOAD_MORE_CATEGORIES}$"),
@@ -270,6 +354,7 @@ def main():
 	)
 
 	dp.add_handler(conv_handler)
+	dp.add_handler(InlineQueryHandler(handle_inline_query))
 
 	# log all errors
 	dp.add_error_handler(error)
