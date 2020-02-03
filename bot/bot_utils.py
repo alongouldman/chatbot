@@ -22,7 +22,7 @@ def extract_number(user_input) -> Optional[float]:
     :param user_input: string with digits in it
     :return: the numbers from the string (as a string)
     """
-    amount_pattern = re.compile(r'(\b[-+]?[0-9]+\.?[0-9]*\b)')
+    amount_pattern = re.compile(r'([-+]?[0-9]+\.?[0-9]*)')
     number = amount_pattern.search(user_input)
     if not number:
         return None
