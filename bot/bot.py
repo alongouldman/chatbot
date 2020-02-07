@@ -11,35 +11,13 @@ from telegram.utils.helpers import escape_markdown
 from telegram.utils.promise import Promise
 
 from bot_utils import get_bot_token, extract_number, get_message_date
-# ================ Bot massages ================
+from consts import ASK_USER_FOR_CATEGORY, ASK_USER_FOR_DESCRIPTION, NO_DESCRIPTION, FORGET_CATEGORY, \
+	FORGET_CATEGORY_MESSAGE, CHOOSE_CATEGORY, LOAD_MORE_CATEGORIES, LOADING_CATEGORIES, PLEASE_CHOOSE_CATEGORY, \
+	CATEGORY_NOT_FOUND_PLEASE_CHOOSE_ANOTHER
 from models import Category, ensure_db_connection, CategoryType, Expense, TelegramGroup
 from spreadsheet import add_to_sheet
 
-ASK_USER_FOR_CATEGORY = """
-איזה קטגוריה ההוצאה?
-שים לב - אם זוהי קטגוריה חד פעמית, לחץ על "אל תזכור את הקטגוריה".
-"""
-
-ASK_USER_FOR_DESCRIPTION = """
-על מה היתה ההוצאה? (לא קטגוריה, אלא פירוט).
-אם אין פירוט מלבד שם הקטגוריה, לחץ על "אין פירוט".
-"""
-
-NO_DESCRIPTION = "אין פירוט"
-
-FORGET_CATEGORY = "change_forget_category_button"
-
-FORGET_CATEGORY_MESSAGE = "אל תזכור את הקטגוריה"
-
-CHOOSE_CATEGORY = "בחר קטגוריה"
-
-LOAD_MORE_CATEGORIES = "עוד קטגוריות..."
-
-LOADING_CATEGORIES = "טוען קטגוריות..........."
-
 AMOUNT, CATEGORY, DESCRIPTION = range(3)
-
-# ==============================================
 
 
 # Enable logging
@@ -261,28 +239,58 @@ def get_all_categories() -> Promise:
 	return categories
 
 
-def get_matching_categories(category_from_user, categories_promise) -> List[Category]:
+def get_matching_categories(category_from_user, categories_promise) -> List[str]:
 	all_categories = categories_promise.result()
 	matching_categories = []
 	for cat in all_categories:
 		if category_from_user in cat.name:
-			matching_categories.append(cat)
+			matching_categories.append(cat.name)
+	if not matching_categories:
+		matching_categories = [CATEGORY_NOT_FOUND_PLEASE_CHOOSE_ANOTHER]
+
+
 	return matching_categories
 
 
-def get_query_results(amount, matching_categories, expense_details):
-	pass
+def get_query_results(amount: float, matching_categories: list, expense_details: str):
+	results = []
+	if not matching_categories:  # we also assume there is no expense details
+		input_message_content = InputTextMessageContent(str(amount))
+		article = InlineQueryResultArticle(
+			id=uuid4(),
+			title=str(amount),
+			description=PLEASE_CHOOSE_CATEGORY,
+			input_message_content=input_message_content)
+		results.append(article)
+	else:
+		for category in matching_categories:
+			# input message content
+			message = f"{amount}, "
+			if expense_details:
+				message += f"{expense_details}, "
+			message += f"{category.name}"
+			input_message_content = InputTextMessageContent(message)
+
+			# description
+			description = f"{expense_details}, {category.name}" if expense_details else f"{category.name}"
+			article = InlineQueryResultArticle(
+				id=uuid4(),
+				title=str(amount),
+				description=description,
+				input_message_content=input_message_content)
+			results.append(article)
+	return results
 
 
 def handle_inline_query(update, context):
 	"""Handle the inline query."""
+	# get categories already from db
+	if 'categories_promise' not in context.user_data:
+		context.user_data['categories_promise'] = get_all_categories()
+
 	query = update.inline_query.query
 	if not query:
 		return
-	
-	# get categories already from db
-	if 'categories_promise' not in context.chat_data:
-		context.chat_data['categories_promise'] = get_all_categories
 
 	matching_categories = []
 	expense_details = ''
@@ -296,33 +304,15 @@ def handle_inline_query(update, context):
 		_, category = query.split(' ', 1)
 		if ',' in category:  # query has category and description
 			expense_details, category = category.split(',')
-		matching_categories = get_matching_categories(category, context.chat_data['categories_promise'])
+			logging.info(f"details: {expense_details}, category: {category}")
+		# TODO: write something if we couldn't find matching category
+		matching_categories = get_matching_categories(category.strip(), context.user_data['categories_promise'])
 
-	results = get_query_results(amount, matching_categories, expense_details)
-	update.inline_query.answer(results)
+	else:
+		matching_categories = get_matching_categories("", context.user_data['categories_promise'])  # this will get all categories
 
-
-	results = [
-		InlineQueryResultArticle(
-			id=uuid4(),
-			title="Caps",
-			description="will display in capital letters",
-			input_message_content=InputTextMessageContent(
-				query.upper())),
-		InlineQueryResultArticle(
-			id=uuid4(),
-			title="Bold",
-			input_message_content=InputTextMessageContent(
-				"*{}*".format(escape_markdown(query)),
-				parse_mode=ParseMode.MARKDOWN)),
-		InlineQueryResultArticle(
-			id=uuid4(),
-			title="Italic",
-			input_message_content=InputTextMessageContent(
-				"_{}_".format(escape_markdown(query)),
-				parse_mode=ParseMode.MARKDOWN))]
-
-	update.inline_query.answer(results)
+	results = get_query_results(amount, matching_categories, expense_details.strip())
+	update.inline_query.answer(results, cache_time=0)
 
 
 def main():
