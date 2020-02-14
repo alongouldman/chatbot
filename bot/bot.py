@@ -4,47 +4,27 @@ from typing import Tuple, List
 from uuid import uuid4
 
 from telegram import (Update, InlineKeyboardButton, InlineKeyboardMarkup, Bot, InlineQueryResultArticle,
-                      InputTextMessageContent, ParseMode)
-from telegram.ext import (Updater, CommandHandler, MessageHandler, Filters,
-                          ConversationHandler, CallbackContext, run_async, CallbackQueryHandler, InlineQueryHandler)
+                      InputTextMessageContent)
+from telegram.ext import (Updater, MessageHandler, Filters,
+                          ConversationHandler, CallbackContext, run_async, InlineQueryHandler, CommandHandler,
+                          CallbackQueryHandler)
 from telegram.utils.helpers import escape_markdown
 from telegram.utils.promise import Promise
 
 from bot_utils import get_bot_token, extract_number, get_message_date
 from consts import ASK_USER_FOR_CATEGORY, ASK_USER_FOR_DESCRIPTION, NO_DESCRIPTION, FORGET_CATEGORY, \
 	FORGET_CATEGORY_MESSAGE, CHOOSE_CATEGORY, LOAD_MORE_CATEGORIES, LOADING_CATEGORIES, PLEASE_CHOOSE_CATEGORY, \
-	CATEGORY_NOT_FOUND_PLEASE_CHOOSE_ANOTHER
+	CATEGORY_NOT_FOUND_PLEASE_CHOOSE_ANOTHER, CATEGORY_MISSING, EXPENSE_SAVED_SUCCESSFULLY
 from models import Category, ensure_db_connection, CategoryType, Expense, TelegramGroup
 from spreadsheet import add_to_sheet
-
-AMOUNT, CATEGORY, DESCRIPTION = range(3)
 
 
 # Enable logging
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-
-@run_async
-@ensure_db_connection
-def get_categories(telegram_group: Promise) -> Promise:
-	logger.info("getting categories from db")
-	categories = Category.objects()  # TODO: filter unknown category
-	if not categories:
-		Category.init_categories()
-		categories = Category.objects()  # TODO: filter unknown category
-
-	categories = [c for c in categories if
-	              c.type != CategoryType.UNKNOWN]  # remove unknown category - this will be used for bank scraper
-	# TODO: filter only relevant expenses!
-	pipeline = [
-		{"$match": {'telegram_group': telegram_group.result().telegram_chat_id}},
-		{"$group": {"_id": "$category", "count": {"$sum": 1}}}
-	]
-	categories_count = list(Expense.objects().aggregate(pipeline))
-	categories_count = {count['_id']: count['count'] for count in categories_count}
-	categories.sort(key=lambda c: categories_count.get(c.name, 0), reverse=True)
-	return categories
+# for the conversation handler
+DESCRIPTION = 1
 
 
 @run_async
@@ -67,163 +47,25 @@ def add_user_to_group(group, user_id):
 		logging.info(f"user {user_id} is added to group {group.telegram_chat_id}")
 
 
-def get_amount_and_ask_about_description(update: Update, context: CallbackContext):
-	# get the categories now and save for later, for better speed
-	group: Promise = get_or_create_group(update.message.chat_id, update.message.from_user.id)
-	categories: Promise = get_categories(group)
-	context.chat_data['categories_promise'] = categories
-	context.chat_data['telegram_group_promise'] = group
-
-	amount = extract_number(update.message.text)
-	logger.info(f"amount is {amount}")
-	expense = Expense(amount=amount)
-	expense.date = get_message_date(update.message)
-	context.chat_data['expense'] = expense
-
-	button_row = [InlineKeyboardButton(NO_DESCRIPTION, callback_data=NO_DESCRIPTION)]
-	update.message.reply_text(ASK_USER_FOR_DESCRIPTION, reply_markup=InlineKeyboardMarkup([button_row]))
-
-	return DESCRIPTION
-
-
-def get_description_and_ask_about_category(update, context):
-	# this could be the second time we get to here, so skip if it is
-	if not context.chat_data['expense'].description:
-		description = update.message.text
-		logger.info(f"got description: {description}")
-		context.chat_data['expense'].description = description
-
-	return ask_about_categories(update, context)
-
-
-def get_categories_markup(categories: list, add_load_more_categories_button=False) -> Tuple[InlineKeyboardMarkup, list]:
-	reply_keyboard = []
-	row = []
-	for category in categories:
-		row.append(InlineKeyboardButton(category.name, callback_data=category.name))
-		if len(row) == 2:
-			reply_keyboard.append(row)
-			row = []
-
-	if row:
-		reply_keyboard.append(row)
-
-	if add_load_more_categories_button:
-		reply_keyboard.append([InlineKeyboardButton(LOAD_MORE_CATEGORIES, callback_data=LOAD_MORE_CATEGORIES)])
-	reply_markup = InlineKeyboardMarkup(reply_keyboard)
-	return reply_markup
-
-
-def ask_about_categories(update: Update, context: CallbackContext, is_callback: bool = False):
-	if is_callback:
-		bot: Bot = update.callback_query.bot
-		chat_id = update.callback_query.message.chat_id
-	else:
-		bot: Bot = update.message.bot
-		chat_id = update.message.chat_id
-
-	# message about not remember category
-	massage = FORGET_CATEGORY_MESSAGE
-	button = InlineKeyboardButton(massage, callback_data=FORGET_CATEGORY)
-	bot.send_message(chat_id, ASK_USER_FOR_CATEGORY, reply_markup=InlineKeyboardMarkup([[button]]))
-
-	message = bot.send_message(chat_id, LOADING_CATEGORIES)
-	categories = context.chat_data['categories_promise'].result()  # get the calculated results of the promise
-	context.chat_data['all_categories'] = categories
-	reply_markup = get_categories_markup(categories[:10], add_load_more_categories_button=True)
-	context.chat_data['displayed_categories'] = categories[:10]
-	message.edit_text(CHOOSE_CATEGORY, reply_markup=reply_markup)
-	return CATEGORY
-
-
-def skip_description_and_ask_about_category(update, context):
-	logger.info("skipping description")
-	return ask_about_categories(update, context, is_callback=True)
-
-
-def change_forget_category_button(update, context):
-	# message about not remember category
-	massage = FORGET_CATEGORY_MESSAGE
-	if context.chat_data[FORGET_CATEGORY]:
-		massage = massage + " ✔"
-	button = InlineKeyboardButton(massage, callback_data=FORGET_CATEGORY)
-	update.callback_query.message.edit_text(ASK_USER_FOR_CATEGORY, reply_markup=InlineKeyboardMarkup([[button]]))
-
-
-def handle_forget_category(update, context):
-	if context.chat_data.get(FORGET_CATEGORY) is None:
-		context.chat_data[FORGET_CATEGORY] = True
-	else:
-		context.chat_data[FORGET_CATEGORY] = not context.chat_data[FORGET_CATEGORY]
-	logging.info(f"remembering category: {context.chat_data[FORGET_CATEGORY]}")
-	change_forget_category_button(update, context)
-	context.chat_data['expense'].remember_category = not context.chat_data[
-		FORGET_CATEGORY]  # "not" because the field is saves as "remember" and not "forget"
-	return CATEGORY
-
-
-def handle_load_more_categories(update, context):
-	logging.info("loading more categories")
-	displayed_categories = context.chat_data['displayed_categories']
-	all_categories = context.chat_data['all_categories']
-	not_displayed_categories = [c for c in all_categories if c not in displayed_categories]
-	load_more = True if len(not_displayed_categories) > 10 else False
-	# load another 10
-	categories_to_display = displayed_categories + not_displayed_categories[:10]
-	reply_markup = get_categories_markup(categories_to_display, add_load_more_categories_button=load_more)
-	context.chat_data['displayed_categories'] = categories_to_display
-	update.callback_query.message.edit_text(CHOOSE_CATEGORY, reply_markup=reply_markup)
-	return CATEGORY
-
-
-def get_category_and_save_expense(update, context):
-	category_name = update.callback_query.data
-	logging.info(f"got category: {category_name}")
-	expense = context.chat_data['expense']
-	categories = context.chat_data['all_categories']
-	category = next(cat for cat in categories if cat.name == category_name)
-
-	# understand if expense is credit or debit
-	if category.type == CategoryType.INCOME:
-		if expense.amount < 0:
-			expense.amount = expense.amount * -1  # makes it positive
-	elif expense.amount > 0:
-		expense.amount = expense.amount * -1  # makes it negative
-
-	expense.category = category
-
-	group = context.chat_data['telegram_group_promise'].result()
-	expense.telegram_group = group
-	expense.save()
-
-	logger.info(f"saving expense: {expense} to category {category} in group {group}")
-	update.callback_query.bot.send_message(update.callback_query.message.chat_id, "ההוצאה הוזנה בהצלחה")
-
-	# also save to spreadsheet. this is temporary, until I add the UI
-	add_to_sheet(expense)
-	return ConversationHandler.END
-
-
 def error(update, context):
 	"""Log Errors caused by Updates."""
-	logger.warning('Update "%s" caused error "%s"', update, context.error)
+	logger.error('Update "%s" caused error "%s"', update, context.error)
 	try:
 		bot: Bot = update.callback_query.bot
 		chat_id = update.callback_query.message.chat_id
 	except AttributeError:
-		bot: Bot = update.message.bot
-		chat_id = update.message.chat_id
+		try:
+			bot: Bot = update.message.bot
+			chat_id = update.message.chat_id
+		except AttributeError:
+			logger.error('Update "%s" is from inline query, no chat to send error to', update)
+			return
 	bot.send_message(chat_id, f"en error occurred: {context.error}, stopping conversation")
-	return ConversationHandler.END
-
-
-def cancel(update, context):
-	logger.info(f"canceling {context.chat_data.get('expense', '')}")
-	return ConversationHandler.END
 
 
 def query_has_only_amount(query):
 	return len(query.strip().split(' ')) == 1
+
 
 @run_async
 @ensure_db_connection
@@ -248,37 +90,24 @@ def get_matching_categories(category_from_user, categories_promise) -> List[str]
 	if not matching_categories:
 		matching_categories = [CATEGORY_NOT_FOUND_PLEASE_CHOOSE_ANOTHER]
 
-
 	return matching_categories
 
 
-def get_query_results(amount: float, matching_categories: list, expense_details: str):
+def get_query_results(amount: float, matching_categories: list):
 	results = []
-	if not matching_categories:  # we also assume there is no expense details
-		input_message_content = InputTextMessageContent(str(amount))
+
+	for category in matching_categories:
+		# input message content
+		message = f"{amount}, {category}"
+		input_message_content = InputTextMessageContent(message)
+
+		# description
 		article = InlineQueryResultArticle(
 			id=uuid4(),
 			title=str(amount),
-			description=PLEASE_CHOOSE_CATEGORY,
+			description=category,
 			input_message_content=input_message_content)
 		results.append(article)
-	else:
-		for category in matching_categories:
-			# input message content
-			message = f"{amount}, "
-			if expense_details:
-				message += f"{expense_details}, "
-			message += f"{category.name}"
-			input_message_content = InputTextMessageContent(message)
-
-			# description
-			description = f"{expense_details}, {category.name}" if expense_details else f"{category.name}"
-			article = InlineQueryResultArticle(
-				id=uuid4(),
-				title=str(amount),
-				description=description,
-				input_message_content=input_message_content)
-			results.append(article)
 	return results
 
 
@@ -292,27 +121,98 @@ def handle_inline_query(update, context):
 	if not query:
 		return
 
-	matching_categories = []
-	expense_details = ''
-
 	# the query can be:
 	#   1. only amount
 	#   2. amount and category
-	#   3. amount, description and category
 	amount = extract_number(query)
 	if not query_has_only_amount(query):
 		_, category = query.split(' ', 1)
-		if ',' in category:  # query has category and description
-			expense_details, category = category.split(',')
-			logging.info(f"details: {expense_details}, category: {category}")
-		# TODO: write something if we couldn't find matching category
 		matching_categories = get_matching_categories(category.strip(), context.user_data['categories_promise'])
 
 	else:
 		matching_categories = get_matching_categories("", context.user_data['categories_promise'])  # this will get all categories
 
-	results = get_query_results(amount, matching_categories, expense_details.strip())
+	results = get_query_results(amount, matching_categories)
 	update.inline_query.answer(results, cache_time=0)
+
+
+def get_amount_and_category_ask_about_description(update, context):
+	
+	if 'group_promise' not in context.user_data:
+		context.user_data['group_promise'] = get_or_create_group(update.effective_chat.id, update.effective_user.id)
+
+	# get categories already from db, in case for some reason we dont have them already
+	if 'categories_promise' not in context.user_data:
+		context.user_data['categories_promise'] = get_all_categories()
+		
+	message = update.message.text
+	logging.info(f"got message: {message}")
+	try:
+		amount, category_name = [item.strip() for item in message.split(',')]
+	except ValueError:  # too many values to unpack
+		update.message.reply_text(CATEGORY_MISSING)
+		return
+	expense = Expense()
+	amount = extract_number(amount)
+	expense.amount = amount
+	expense.date = get_message_date(update.message)
+
+	all_categories = context.user_data['categories_promise'].result()
+	category = next((cat for cat in all_categories if cat.name == category_name), None)
+	if not category:
+		update.message.reply_text(CATEGORY_NOT_FOUND_PLEASE_CHOOSE_ANOTHER)
+		return
+
+	expense.amount = understand_if_expense_is_credit_or_debit(category, expense)
+
+	expense.category = category
+	group = context.user_data['group_promise'].result()
+	expense.telegram_group = group
+
+	context.user_data['expense'] = expense
+
+	button_row = [InlineKeyboardButton(NO_DESCRIPTION, callback_data=NO_DESCRIPTION)]
+	update.message.reply_text(ASK_USER_FOR_DESCRIPTION, reply_markup=InlineKeyboardMarkup([button_row]))
+
+	return DESCRIPTION
+
+
+def skip_description_and_save_expense(update, context):
+	logger.info("skipping description")
+	save_expense(context.user_data['expense'])
+	update.effective_chat.send_message(EXPENSE_SAVED_SUCCESSFULLY)
+	return ConversationHandler.END
+
+
+def get_description_and_save_expense(update, context):
+	description = update.message.text
+	logger.info(f"got description: {description}")
+	context.user_data['expense'].description = description
+	save_expense(context.user_data['expense'])
+	update.message.reply_text(EXPENSE_SAVED_SUCCESSFULLY)
+	return ConversationHandler.END
+
+
+def save_expense(expense: Expense) -> None:
+	logger.info(f"saving expense: {expense}")
+	expense.save()
+	# also save to spreadsheet. this is temporary, until I add the UI
+	add_to_sheet(expense)
+
+
+def understand_if_expense_is_credit_or_debit(category, expense):
+	# understand if expense is credit or debit
+	if category.type == CategoryType.INCOME:
+		if expense.amount < 0:
+			return expense.amount * -1  # makes it positive
+	elif expense.amount > 0:
+		return expense.amount * -1  # makes it negative
+	return expense.amount
+
+
+def cancel(update, context):
+	logger.info(f"canceling {context.user_data.get('expense', '')}")
+	return ConversationHandler.END
 
 
 def main():
@@ -324,26 +224,26 @@ def main():
 	# Get the dispatcher to register handlers
 	dp = updater.dispatcher
 
-	# Add conversation handler with the states GENDER, PHOTO, LOCATION and BIO
 	conv_handler = ConversationHandler(
 		entry_points=[
-			MessageHandler(Filters.regex(r'(\b[-+]?[0-9]+\.?[0-9]*\b)'), get_amount_and_ask_about_description)],
+			MessageHandler(Filters.text, get_amount_and_category_ask_about_description)],
 
 		states={
-			DESCRIPTION: [MessageHandler(Filters.text, get_description_and_ask_about_category),
-			              CallbackQueryHandler(skip_description_and_ask_about_category, pattern=f"^{NO_DESCRIPTION}$")],
-
-			CATEGORY: [CallbackQueryHandler(handle_forget_category, pattern=f"^{FORGET_CATEGORY}$"),
-			           CallbackQueryHandler(handle_load_more_categories, pattern=f"^{LOAD_MORE_CATEGORIES}$"),
-			           CallbackQueryHandler(get_category_and_save_expense)]
+			DESCRIPTION: [MessageHandler(Filters.text, get_description_and_save_expense),
+						  CallbackQueryHandler(skip_description_and_save_expense, pattern=f"^{NO_DESCRIPTION}$")]
 		},
 
 		fallbacks=[CommandHandler('cancel', cancel)],
 		conversation_timeout=1000,
-		allow_reentry=True
 	)
 
 	dp.add_handler(conv_handler)
+
+
+	# TODO:
+	# make category an Enum hard coded, so it will be faster. also migrations can be easier.
+	# migrate investment category to have prefix "investment"
+
 	dp.add_handler(InlineQueryHandler(handle_inline_query))
 
 	# log all errors
