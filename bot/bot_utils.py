@@ -5,28 +5,19 @@ from typing import Optional
 
 import pytz
 import telegram
-from pytz import timezone
-
-# =====================================
-#  global variables
-# =====================================
-
-# =====================================
-#  functions
-# =====================================
 
 
-def extract_number(user_input) -> Optional[int]:
+def extract_number(user_input) -> Optional[float]:
     """
     gets the amount of money from a string
     :param user_input: string with digits in it
     :return: the numbers from the string (as a string)
     """
-    amount_pattern = re.compile(r'(\b[-+]?[0-9]+\.?[0-9]*\b)')
+    amount_pattern = re.compile(r'([-+]?[0-9]+\.?[0-9]*)')
     number = amount_pattern.search(user_input)
     if not number:
         return None
-    return int(number[0])
+    return float(number[0])
 
 
 def get_message_date(message: telegram.message.Message) -> datetime:
