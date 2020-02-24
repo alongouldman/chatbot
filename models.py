@@ -1,18 +1,14 @@
-import datetime
+import logging
 import os
-import random
+import pathlib
+from functools import lru_cache
 
 import mongoengine
 import pandas
 from mongoengine import connect, Document, StringField, FloatField, DateTimeField, \
-    IntField, BooleanField, get_connection, EmbeddedDocumentListField, EmbeddedDocument, \
-    ListField, ReferenceField
-from mongoengine.queryset.visitor import Q
-import logging
-
+    BooleanField, get_connection, ListField, ReferenceField
 
 # Enable logging
-
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 logger = logging.getLogger(__name__)
 
@@ -42,7 +38,7 @@ def init_session():
 
 class StringEnum(object):
     @classmethod
-    def get_class_variables(cls):
+    def values(cls):
         wanted_values = []
         for key, value in cls.__dict__.items():
             if not key.startswith('__'):
@@ -61,14 +57,12 @@ class CategoryType(StringEnum):
     UNKNOWN = 'unknown'
 
 
-class Category(Document):
-
-    meta = {
-        'collection': 'categories'
-    }
-
-    name = StringField(required=True, primary_key=True)  # most be unique
-    type = StringField(required=True, choices=CategoryType.get_class_variables())  # category type
+# # TODO: migrate investment categories in production DB.
+class Category:
+    def __init__(self, name, type_):
+        self.name = name
+        assert type_ in CategoryType.values()
+        self.type = type_
 
     def __str__(self):
         return f"<Category object: name={self.name}, type={self.type}>"
@@ -82,30 +76,15 @@ class Category(Document):
     def __eq__(self, other):
         return isinstance(other, Category) and self.name == other.name
 
-    @staticmethod
-    @ensure_db_connection
-    def init_categories():
-        existing_categories = Category.objects()
-        df = pandas.read_csv('scripts/initial_categories.csv')
-        if not existing_categories.filter(name=CategoryType.UNKNOWN):
-            unknown_category = Category(name=CategoryType.UNKNOWN, type=CategoryType.UNKNOWN)
-            unknown_category.save()
-            logging.info(f'category {unknown_category} saved')
-
-        existing_categories_names = {cat.name for cat in existing_categories.all()}
+    @classmethod
+    @lru_cache(maxsize=None)
+    def all_categories(cls):
+        file_errors_location = pathlib.Path(__file__).parent.absolute() / 'scripts/initial_categories.xlsx'
+        df = pandas.read_excel(file_errors_location)
+        all_categories = []
         for index, row in df.iterrows():
-            if row['name'] not in existing_categories_names:
-                category = Category()
-                category.name = row['name']
-                category.type = row['type']
-
-                try:
-                    category.save()
-                    logging.info(f'category {category} saved')
-                except RuntimeError as e:
-                    logging.error(e)
-            else:
-                logging.info(f"category {row['name']} exists")
+            all_categories.append(cls(row['name'], row['type']))
+        return all_categories
 
 
 class TelegramGroup(Document):
@@ -119,12 +98,6 @@ class TelegramGroup(Document):
     def __repr__(self):
         return f"<TelegramGroup object, id={self.telegram_chat_id} user_ids={self.user_ids}>"
 
-    # def add_category(self, category: Category):
-    #     exists = any([cat.name == category.name for cat in self.categories])
-    #     if not exists:
-    #         return self.categories.append(category)
-    #     raise RuntimeError(f"category with name={category.name} already exists")
-
 
 class Expense(Document):
 
@@ -136,11 +109,11 @@ class Expense(Document):
     remember_category = BooleanField(required=True, default=True)
     description = StringField()
     amount = FloatField(required=True)
-    category = ReferenceField(Category, required=True, default=Category(name=CategoryType.UNKNOWN), reverse_delete_rule=mongoengine.NULLIFY)
+    category = StringField(required=True)
     telegram_group = ReferenceField(TelegramGroup, required=True, reverse_delete_rule=mongoengine.CASCADE)
 
     def __str__(self):
-        return f"<Expense object, date: {self.date} description: {self.description} amount: {self.amount}, category_name={self.category.name}, group_id={self.telegram_group.telegram_chat_id}>"
+        return f"<Expense object, date: {self.date} description: {self.description} amount: {self.amount}, category={self.category}, group_id={self.telegram_group.telegram_chat_id}>"
 
 # class BankAccount(EmbeddedDocument):
 #     hashed_username
@@ -157,26 +130,24 @@ class Expense(Document):
 
 if __name__ == "__main__":
     # TODO: write some tests for the object types...
-    try:
-        connection_string = os.environ['db_connection_string']
-    except KeyError:
-        with open('db_connection_string.txt') as f:
-            connection_string = f.read()
-    connect(host=connection_string, connect=False)
-    Category.init_categories()
-    group = TelegramGroup.objects().first()
-    # group = TelegramGroup(telegram_chat_id=str(random.randint(0, 1000)))
-    group.save()
-    for i in range(200):
-        expense = Expense(date=datetime.date.today(),
-                           amount=24.32,
-                           description="something")
-        expense.telegram_group = group
-        expense.category = random.choice(Category.objects().all())
-        expense.save()
-        logging.info(f'expense {expense} saved')
+    # try:
+    #     connection_string = os.environ['db_connection_string']
+    # except KeyError:
+    #     with open('db_connection_string.txt') as f:
+    #         connection_string = f.read()
+    # connect(host=connection_string, connect=False)
+    print(Category.all_categories())
+    print(Category.all_categories())
+    print(Category.all_categories())
+    
+    # group = TelegramGroup.objects().first()
+    # group.save()
+    # expense = Expense(date=datetime.date.today(),
+    #                        amount=24.32,
+    #                        description="something")
+    # expense.telegram_group = group
+    # expense.category = "test"
+    # expense.save()
+    # logging.info(f'expense {expense} saved')
 
-
-    # Category.objects(name='אוכל')
-    # expense1.save()
     print("done")
