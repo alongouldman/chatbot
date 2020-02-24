@@ -5,15 +5,6 @@ from typing import Optional
 
 import pytz
 import telegram
-from pytz import timezone
-
-# =====================================
-#  global variables
-# =====================================
-
-# =====================================
-#  functions
-# =====================================
 
 
 def extract_number(user_input) -> Optional[float]:
