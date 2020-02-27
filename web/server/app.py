@@ -1,12 +1,12 @@
 import os
 from flask import Flask, render_template
 
-app = Flask(__name__)
+app = Flask(__name__, static_folder="../client/build/static", template_folder="../client/build")
 
 
 @app.route('/')
 def homepage():
-    return render_template('../client/build/index.html')
+    return render_template('index.html')
 
 
 if __name__ == '__main__':
