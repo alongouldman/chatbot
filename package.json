@@ -1,0 +1,9 @@
+  {
+  "name": "root",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "start": "cd web/client && npm start",
+    "build": "cd web/client && npm run build"
+  }
+}
