@@ -16,3 +16,4 @@ PLEASE_CHOOSE_CATEGORY = "אנא בחר קטגוריה"
 CATEGORY_NOT_FOUND_PLEASE_CHOOSE_ANOTHER = 'לא נמצאה קטגוריה. אנא בחר קטגוריה אחרת'
 CATEGORY_MISSING = "חסרה קטגוריה. על מה היתה ההוצאה?"
 EXPENSE_SAVED_SUCCESSFULLY = "ההוצאה הוזנה בהצלחה"
+EXPENSE_AND_CATEGORY_DELIMITER = "|"

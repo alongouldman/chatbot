@@ -11,7 +11,7 @@ from telegram.utils.promise import Promise
 
 from bot_utils import get_bot_token, extract_number, get_message_date
 from consts import ASK_USER_FOR_DESCRIPTION, NO_DESCRIPTION, CATEGORY_NOT_FOUND_PLEASE_CHOOSE_ANOTHER, CATEGORY_MISSING, \
-	EXPENSE_SAVED_SUCCESSFULLY
+	EXPENSE_SAVED_SUCCESSFULLY, EXPENSE_AND_CATEGORY_DELIMITER
 from models import Category, ensure_db_connection, CategoryType, Expense, TelegramGroup
 from spreadsheet import add_to_sheet
 
@@ -79,7 +79,7 @@ def get_query_results(amount: float, matching_categories: list):
 
 	for category in matching_categories:
 		# input message content
-		message = f"{amount}, {category}"
+		message = f"{amount} {EXPENSE_AND_CATEGORY_DELIMITER} {category}"
 		input_message_content = InputTextMessageContent(message)
 
 		# description
@@ -129,7 +129,7 @@ def get_amount_and_category_ask_about_description(update, context):
 	message = update.message.text
 	logging.info(f"got message: {message}")
 	try:
-		amount, category_name = [item.strip() for item in message.split(',')]
+		amount, category_name = [item.strip() for item in message.split(EXPENSE_AND_CATEGORY_DELIMITER)]
 	except ValueError:  # too many values to unpack
 		update.message.reply_text(CATEGORY_MISSING)
 		return
