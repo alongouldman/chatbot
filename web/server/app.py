@@ -1,12 +1,19 @@
 import os
 from flask import Flask, render_template
 
+from api.expense_details import expense_details_handler
+
 app = Flask(__name__, static_folder="../client/build/static", template_folder="../client/build")
 
 
 @app.route('/')
 def homepage():
     return render_template('index.html')
+
+
+@app.route('/api/expense_details', methods=['GET'])
+def expense_details():
+    return expense_details_handler()
 
 
 if __name__ == '__main__':
