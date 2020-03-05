@@ -1,7 +1,7 @@
 import os
 from flask import Flask, render_template
 
-from api.expense_details import expense_details_handler
+from web.server.api.expense_details import expense_details_handler
 
 app = Flask(__name__, static_folder="../client/build/static", template_folder="../client/build")
 
