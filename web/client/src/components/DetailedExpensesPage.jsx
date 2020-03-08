@@ -1,11 +1,12 @@
 import * as React from "react";
-import { DatePicker } from 'antd';
+import {DatePicker, PageHeader, Spin} from 'antd';
 import moment from "moment";
 import axios from 'axios';
-var api = require('../api/api');
+import ExpenseDetailsTable from "./ExpenseDetailsTable";
+import './DetailedExpensesPage.scss'
 
 
-const { RangePicker } = DatePicker;
+const {RangePicker} = DatePicker;
 
 
 export default class DetailedExpensesPage extends React.Component {
@@ -13,25 +14,41 @@ export default class DetailedExpensesPage extends React.Component {
     constructor(props) {
         super(props);
         this.state = {
-            fromDate: moment().startOf('month'),
+            fromDate: moment().startOf('year'),
             toDate: moment(),
-
+            expenses: null
         };
     }
 
     handleCalendarChange = (dates, datesString) => {
         this.setState({
-           fromDate: dates[0],
-           toDate: dates[1]
+            fromDate: dates[0],
+            toDate: dates[1]
+        }, () => {
+            this.getExpenseData();
         });
-        console.log(this.state);
     };
+
+    setExpenses(expenses) {
+        expenses.forEach((expense) => {
+            expense.date = moment(expense.date.$date).format("DD/MM/YYYY");
+            expense.key = expense._id
+        });
+        this.setState({
+            expenses: expenses
+        })
+    }
 
     getExpenseData = () => {
 
-        axios.get('/api/expense_details')
+        axios.get('/api/expense_details', {
+            params: {
+                fromDate: this.state.fromDate.format("DD-MM-YYYY"),
+                toDate: this.state.toDate.format("DD-MM-YYYY")
+            }
+        })
             .then(res => {
-                console.log(res);
+                this.setExpenses(res.data);
             })
     };
 
@@ -41,16 +58,26 @@ export default class DetailedExpensesPage extends React.Component {
 
 
     render() {
+        let loadingOrComponent;
+        if (this.state.expenses) {
+            loadingOrComponent = <ExpenseDetailsTable expenses={this.state.expenses}/>
+        }
+        else {
+            loadingOrComponent =  <Spin size="large" tip="Loading Expenses..." className="loading"/>
+        }
         return (
             <div>
-                <RangePicker
-                    onChange={(dates, datesString) => this.handleCalendarChange(dates, datesString)}
-                    defaultValue={[this.state.fromDate, this.state.toDate]}
-                    format={"DD/MM/YYYY"}
+                <PageHeader
+                    title="Detailed Expenses"
+                    extra={
+                        <RangePicker
+                            onChange={(dates, datesString) => this.handleCalendarChange(dates, datesString)}
+                            format={"DD/MM/YYYY"}
+                            defaultValue={[this.state.fromDate, this.state.toDate]}
+                        />
+                    }
                 />
-                <div>
-                    showing dates from {this.state.fromDate.toString()} to {this.state.toDate.toString()}
-                </div>
+                {loadingOrComponent}
             </div>
         );
     }
