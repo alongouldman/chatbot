@@ -8,6 +8,8 @@ export default class ExpenseDetailsTable extends React.Component {
 
     constructor(props) {
         super(props);
+        console.log(this.props.expenses);
+
         let allCategories = new Set();
         this.props.expenses.forEach((expense) => {
             allCategories.add(expense.category);
@@ -24,7 +26,6 @@ export default class ExpenseDetailsTable extends React.Component {
             {
                 title: 'Amount',
                 dataIndex: 'amount',
-                key: 'amount',
                 sorter: (a, b) => a.amount - b.amount,
                 className: "amount",
                 filters: [{
@@ -48,7 +49,6 @@ export default class ExpenseDetailsTable extends React.Component {
             {
                 title: 'Category',
                 dataIndex: 'category',
-                key: 'category',
                 sorter: (a, b) => a.category.localeCompare(b.category),
                 filters: filters,
                 onFilter: (value, record) => record.category === value
@@ -56,8 +56,22 @@ export default class ExpenseDetailsTable extends React.Component {
             {
                 title: 'Date',
                 dataIndex: 'date',
-                key: 'date',
                 sorter: (a, b) => moment(a.date, "DD/MM/YYYY").unix() - moment(b.date, "DD/MM/YYYY").unix()
+            },
+            {
+                title: 'Description',
+                dataIndex: 'description',
+                sorter: (a, b) => {
+                    if (!('description' in a)) {
+                        return 1;
+                    }
+                    else if (!('description' in b)) {
+                        return -1;
+                    }
+                    else {
+                        return a.description.localeCompare(b.description);
+                    }
+                }
             },
         ];
     }
@@ -68,7 +82,10 @@ export default class ExpenseDetailsTable extends React.Component {
             <div>
                 <Table dataSource={this.props.expenses} columns={this.tableColumns}
                        rowClassName={(record, index) => record.amount > 0 ? "credit-row" : 'debit-row'}
-                />;
+                       pagination={{ defaultPageSize: 50}}
+                       scroll={{ y: 550 }}
+                       size="small"
+                />
             </div>
         );
     }

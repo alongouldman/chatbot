@@ -78,7 +78,7 @@ class Category:
 
     @classmethod
     @lru_cache(maxsize=None)
-    def all_categories(cls):
+    def all_categories(cls) -> list:
         file_errors_location = pathlib.Path(__file__).parent.absolute() / 'scripts/initial_categories.xlsx'
         df = pandas.read_excel(file_errors_location)
         all_categories = []

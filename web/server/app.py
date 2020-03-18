@@ -2,6 +2,7 @@ import os
 from flask import Flask, render_template
 
 from web.server.api.expense_details import expense_details_handler
+from web.server.api.expense_summery import expense_summery_handler
 
 app = Flask(__name__, static_folder="../client/build/static", template_folder="../client/build")
 
@@ -14,6 +15,11 @@ def homepage():
 @app.route('/api/expense_details', methods=['GET'])
 def expense_details():
     return expense_details_handler()
+
+
+@app.route('/api/expense_summery', methods=['GET'])
+def expense_summery():
+    return expense_summery_handler()
 
 
 if __name__ == '__main__':
