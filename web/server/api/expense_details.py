@@ -10,7 +10,7 @@ def expense_details_handler():
 
 	logging.info("showing expense details from %s to %s" % (from_date, to_date))
 
-	expenses = get_expenses_from_date_to_date(from_date, to_date)
+	expenses = get_expenses_from_date_to_date(from_date, to_date).all()
 	logging.info("sending %d expenses", len(expenses))
 	# TODO: filter by telegram users group
 	return expenses.to_json()
