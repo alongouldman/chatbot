@@ -12,3 +12,5 @@ __pycache__/
 db_connection_string.txt
 bank_login.txt
 scripts/~$*
+*.egg-info
+.history/

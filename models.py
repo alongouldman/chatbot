@@ -31,7 +31,7 @@ def init_session():
         connection_string_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'db_connection_string.txt')
         with open(connection_string_path) as f:
             connection_string = f.read()
-    connection = connect(host=connection_string)
+    connection = connect(host=connection_string, socketKeepAlive=True)
     logger.info("DB connected")
     return connection
 
@@ -78,7 +78,7 @@ class Category:
 
     @classmethod
     @lru_cache(maxsize=None)
-    def all_categories(cls):
+    def all_categories(cls) -> list:
         file_errors_location = pathlib.Path(__file__).parent.absolute() / 'scripts/initial_categories.xlsx'
         df = pandas.read_excel(file_errors_location)
         all_categories = []
