@@ -3,7 +3,7 @@ import './App.scss';
 import {Layout, Menu} from "antd";
 
 import {BrowserRouter as Router, Link, Route, Switch} from "react-router-dom";
-import SummaryPage from "./components/SummaryPage";
+import SummaryPage from "./components/summaryPage/SummaryPage";
 import DetailedExpensesPage from "./components/DetailedExpensesPage";
 import DashboardPage from "./components/DashboardPage";
 
